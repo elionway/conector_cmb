@@ -25,6 +25,14 @@ class Opencart {
 
     protected string $cnpj = '';
 
+    protected string $state_registration = '';
+
+    protected string $address_number = '';
+
+    protected string $address_complement = '';
+
+    protected string $neighborhood = '';
+
     public function __construct()
     {
         $this->validateSettings();
@@ -42,6 +50,14 @@ class Opencart {
         $this->cpf = config('connector.custom_fields')['cpf'];
 
         $this->cnpj = config('connector.custom_fields')['cnpj'];
+
+        $this->state_registration = config('connector.custom_fields')['state_registration'];
+
+        $this->address_number = config('connector.custom_fields')['address_number'];
+
+        $this->address_complement = config('connector.custom_fields')['address_complement'];
+
+        $this->neighborhood = config('connector.custom_fields')['neighborhood'];
 
         $this->accessToken();
     }
@@ -116,6 +132,26 @@ class Opencart {
     public function cpf(): string
     {
         return $this->cpf;
+    }
+
+    public function stateRegistration(): string
+    {
+        return $this->state_registration;
+    }
+
+    public function addressNumber(): string
+    {
+        return $this->address_number;
+    }
+
+    public function addressComplement(): string
+    {
+        return $this->address_complement;
+    }
+
+    public function neighborhood(): string
+    {
+        return $this->neighborhood;
     }
 
     private function action(string $action, ?array $queryParams = []): string

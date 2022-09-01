@@ -17,7 +17,13 @@ return [
         'finished_order' => 7,
     ],
     'custom_fields' => [
-        'cnpj' => 'cnpj',
-        'cpf' => 'cpf',
+        'cnpj' => 'CNPJ',
+        'cpf' => 'CPF',
+        'state_registration' => 'IE',
+        'address_number' => 'address_number',
+        'address_complement' => 'address_complemento',
+        'neighborhood' => 'neighborhood'
     ],
+    'application_code' => '',
+    'ibge_country' => '1058',
 ];

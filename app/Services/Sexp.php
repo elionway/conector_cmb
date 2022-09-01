@@ -9,6 +9,11 @@ class Sexp {
 
     public function orderHasTrackingNumber(int $order_id): bool
     {
-        return true;
+        return !!$this->getOrderTrackingNumber($order_id);
+    }
+
+    public function getOrderTrackingNumber(int $order_id): ?string
+    {
+        return 'BRHFDSIODSFHIU';
     }
 }

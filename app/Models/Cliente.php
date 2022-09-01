@@ -2,15 +2,17 @@
 
 namespace App\Models;
 
+use App\Traits\NoTimestamps;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use App\Traits\HasPrefix;
 
 class Cliente extends Model
 {
-    use HasFactory, HasPrefix;
+    use HasFactory;
 
     protected $table = 'CLIENTE';
 
-    private $prefix = 'CL';
+    protected $guarded = [];
+
+    public $timestamps = false;
 }

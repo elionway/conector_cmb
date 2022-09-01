@@ -42,8 +42,8 @@ class SendOrdersToSexp extends Command
     {
         Opencart::orderHistory($order_id, [
             'order_status_id' => Opencart::updateStatuses('integrated_sexp_order'),
-            'comment' => 'Enviado para separação',
-            'notify' => true,
+            'comment' => 'Recebido na expedição',
+            'notify' => false,
         ]);
     }
 
