@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "170b37b8bd4c531c19ec4bdf12eced7b",
+    "content-hash": "50023aee02aa0ab0b384fabd872212f5",
     "packages": [
         {
             "name": "brick/math",
@@ -136,6 +136,60 @@
                 "source": "https://github.com/dflydev/dflydev-dot-access-data/tree/v3.0.1"
             },
             "time": "2021-08-13T13:06:58+00:00"
+        },
+        {
+            "name": "digitickets/lalit",
+            "version": "3.3.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/digitickets/lalit.git",
+                "reference": "c42d6ba903ee78ea4210582fb8401aafa9858678"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/digitickets/lalit/zipball/c42d6ba903ee78ea4210582fb8401aafa9858678",
+                "reference": "c42d6ba903ee78ea4210582fb8401aafa9858678",
+                "shasum": ""
+            },
+            "require": {
+                "ext-dom": "*",
+                "php": ">=7"
+            },
+            "require-dev": {
+                "mockery/mockery": "^0",
+                "phpunit/phpunit": "^6"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "LaLit\\": "src"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "CC0-1.0"
+            ],
+            "authors": [
+                {
+                    "name": "Lalit Patel",
+                    "role": "Lead Developer"
+                },
+                {
+                    "name": "Richard Quadling",
+                    "role": "Developer"
+                }
+            ],
+            "description": "GitHub copy of LaLit's XML2Array and Array2XML",
+            "homepage": "http://www.lalit.org/lab",
+            "keywords": [
+                "array",
+                "xml"
+            ],
+            "support": {
+                "issues": "https://github.com/digitickets/lalit/issues",
+                "source": "https://github.com/digitickets/lalit/tree/3.3.0"
+            },
+            "time": "2022-03-10T17:19:42+00:00"
         },
         {
             "name": "doctrine/cache",

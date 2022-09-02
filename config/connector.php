@@ -20,10 +20,19 @@ return [
         'cnpj' => 'CNPJ',
         'cpf' => 'CPF',
         'state_registration' => 'IE',
-        'address_number' => 'address_number',
-        'address_complement' => 'address_complemento',
-        'neighborhood' => 'neighborhood'
+        'address_number' => '7',
+        'address_complement' => '6',
+        'neighborhood' => '8'
     ],
     'application_code' => '',
     'ibge_country' => '1058',
+    'main_address' => [
+        'address' => 'RENE BITENCOURT',
+        'number' => '25',
+        'neighborhood' => 'SB',
+        'postcode' => '22558441',
+        'city' => 'Rio de Janeiro',
+        'state_code' => 'RJ',
+        'country' => 'BR',
+    ],
 ];
