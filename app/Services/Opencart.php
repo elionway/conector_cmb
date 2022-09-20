@@ -183,7 +183,7 @@ class Opencart {
 
     private function errorMessage(Response $response): string
     {
-        $errors = $response->object()->errors;
+        $errors = $response->object()?->errors ?? [];
 
         $array_errors = [];
 
