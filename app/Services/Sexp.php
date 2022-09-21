@@ -35,6 +35,7 @@ class Sexp {
     {
         $params = [
             'chaveUnica' => 'ECMB' . str_pad($order_id, 9, '0', STR_PAD_LEFT),
+            'codigoProduto' => '803479',
         ];
 
         $params = $this->parseSearchOrderParams($params);
@@ -46,7 +47,9 @@ class Sexp {
 
     private function renderTrackingNumberFromRequest(array $response): ?string
     {
-        return 'HSFUIODHSOF';
+        $package = $response['soap:Envelope']['soap:Body']['ns2:consultarRemessaResponse']['informacoesRemessa'];
+
+        return $package['numeroPostagem'] ?? null;
     }
 
     public function addressSettings(): array
