@@ -2,11 +2,14 @@
 
 namespace App\Services;
 
-use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Storage;
 use LaLit\Array2XML;
 use LaLit\XML2Array;
+use \Exception;
+use Carbon\Carbon;
+
 
 class Sexp {
     private ?array $address_settings = [];
@@ -93,13 +96,16 @@ class Sexp {
 
         $url = 'http://192.168.250.75/sexp-ws/SexpWS?wsdl';
 
-        $request = Http::post($url, $params);
+        $request = Http::withHeaders([
+            'Content-Type' => 'text/xml;charset=UTF-8', 
+            'Accept-Encoding' => 'gzip, deflate'
+        ])
+        ->withBody($params, 'text/xml')
+        ->post($url);
 
         $this->log($url, $request, $params);
 
-        if ($request->failed()) {
-            return;    
-        }
+        throw_if($request->failed(), new Exception($request->body()));
 
         $response = $request->body();
 
@@ -116,7 +122,7 @@ class Sexp {
 
         $stringfied_data = json_encode($log_data);
 
-        $key = md5($stringfied_data . time());
+        $key = Carbon::now()->format('YmdHis') . '-' . md5($stringfied_data . time());
 
         Storage::put("api-calls/sexp/{$key}.txt", $stringfied_data);
     }

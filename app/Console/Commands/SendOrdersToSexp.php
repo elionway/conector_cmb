@@ -32,9 +32,14 @@ class SendOrdersToSexp extends Command
         $orders = Opencart::orders(['filter_status' => Opencart::searchStatuses('new_order')]);
 
         foreach ($orders as $order) {
-            Sexp::createOrder($this->formatOrderDataToSexp($order));
+            try {
+                Sexp::createOrder($this->formatOrderDataToSexp($order));
 
-            $this->updateOpencartOrderStatus($order['order_id']);
+                $this->updateOpencartOrderStatus($order['order_id']);
+            } catch (\Throwable $th) {
+                $this->info("{$order['order_id']} - Falhou: {$th->getMessage()}");
+            }
+            
         }
     }
 
