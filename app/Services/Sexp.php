@@ -88,8 +88,8 @@ class Sexp {
     private function execute(array $params)
     {
         $params = $this->createXmlFromArray($params);
-        
-        $url = 'http://cmbhlgjboss04/sexp-ws/SexpWS?wsdl';
+
+        $url = 'http://192.168.250.75/sexp-ws/SexpWS?wsdl';
 
         $request = Http::post($url, $params);
 

@@ -92,7 +92,7 @@ class SendOrdersToSexp extends Command
 
         return [
             'chaveUnica' => 'ECMB' . str_pad($order['order_id'], 9, '0', STR_PAD_LEFT),
-            'codigoProduto' => '802402',
+            'codigoProduto' => '803479',
             'enderecoDevolucao' => $this->address(),
             'enderecoPrincipal' => [
                 'bairro' => $order['shipping']['address_2'],
@@ -103,8 +103,9 @@ class SendOrdersToSexp extends Command
                 'rua' => $order['shipping']['address_1'],
                 'uf' => $order['shipping']['zone_code'],
             ],
-            'idServico' => '8',
+            'idServico' => 12,
             'nomeCliente' => $order['firstname'] . ' ' . $order['lastname'],
+            'codigoCliente' => 1,
             'quantidade' => '1',
             'tipoEmbalagem' => 'CAIXA/PACOTE',
             'valor' => $order['total'],
