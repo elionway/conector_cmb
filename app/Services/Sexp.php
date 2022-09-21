@@ -2,7 +2,9 @@
 
 namespace App\Services;
 
+use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage;
 use LaLit\Array2XML;
 use LaLit\XML2Array;
 
@@ -93,6 +95,8 @@ class Sexp {
 
         $request = Http::post($url, $params);
 
+        $this->log($url, $request, $params);
+
         if ($request->failed()) {
             return;    
         }
@@ -100,6 +104,21 @@ class Sexp {
         $response = $request->body();
 
         return XML2Array::createArray($response);
+    }
+
+    private function log(string $url, Response $response, ?string $params = '')
+    {
+        $log_data = [
+            'url' => $url,
+            'body' => $response->body(),
+            'params' => $params,
+        ];
+
+        $stringfied_data = json_encode($log_data);
+
+        $key = md5($stringfied_data . time());
+
+        Storage::put("api-calls/sexp/{$key}.txt", $stringfied_data);
     }
 
     private function createXmlFromArray(array $params): string
