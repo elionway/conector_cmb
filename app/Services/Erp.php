@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Cliente;
 use App\Models\Pedido;
 use App\Models\Titulo;
+use App\Models\Faturado;
 use Illuminate\Support\Facades\DB;
 
 class Erp {
@@ -30,9 +31,14 @@ class Erp {
         });
     }
 
-    public function orderHasInvoice(int $order_id): bool
+    public function orderHasInvoice(int $orderId): bool
     {
-        return true;
+        return !!$this->find($orderId);
+    }
+
+    public function find(int $orderId): ?Faturado
+    {
+        return Faturado::where('PEDIDO', $orderId)->first();
     }
 
     public function applicationCode(): string

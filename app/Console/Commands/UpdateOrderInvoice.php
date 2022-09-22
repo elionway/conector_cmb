@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Support\Erp;
 use App\Support\Opencart;
+use App\Support\Sexp;
 use Illuminate\Console\Command;
 
 class UpdateOrderInvoice extends Command
@@ -32,17 +33,19 @@ class UpdateOrderInvoice extends Command
         $orders = Opencart::orders(['filter_status' => Opencart::searchStatuses('invoiced_order')]);
 
         foreach ($orders as $order) {
-            if (Erp::orderHasInvoice($order['order_id'])) {
-                $this->updateOpencartOrderStatus($order['order_id']);
+            if ($invoiced = Erp::find($order['order_id'])) {
+                $trackingNumer = Sexp::getOrderTrackingNumber($order['order_id']);
+
+                $this->updateOpencartOrderStatus($order['order_id'], $invoiced->nota, $trackingNumber);
             }
         }
     }
 
-    private function updateOpencartOrderStatus(int $order_id)
+    private function updateOpencartOrderStatus(int $orderId, string $invoiceNumber, string $trackingNumber)
     {
         Opencart::orderHistory($order_id, [
             'order_status_id' => Opencart::updateStatuses('finished_order'),
-            'comment' => 'Pedido Enviado',
+            'comment' => "Seu pedido foi enviado. <br/> <b>Código de Rastreamento:</b> {$trackingNumber} <br /> <b>Número da Nota Fiscal:</b> {$invoiceNumber}",
             'notify' => true,
         ]);
     }
