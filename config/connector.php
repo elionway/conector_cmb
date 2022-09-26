@@ -24,7 +24,7 @@ return [
         'address_complement' => '6',
         'neighborhood' => '8'
     ],
-    'application_code' => '',
+    'application_code' => 'ECMB',
     'ibge_country' => '1058',
     'main_address' => [
         'address' => 'RENE BITENCOURT',

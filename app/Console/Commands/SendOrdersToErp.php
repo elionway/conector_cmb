@@ -191,7 +191,7 @@ class SendOrdersToErp extends Command
         $ibgeInfo = $this->ibge($order['shipping']['postcode']);
 
         return [
-            'CL_APLIC' => '',
+            'CL_APLIC' => 'ECMB',
             'CL_STATUS' => 'M',
             'CL_CPFCNPJ' => $this->document($order['custom_fields']),
             'CL_END' => "{$order['shipping']['address_1']}, {$address_number}, {$order['shipping']['address_2']}",
