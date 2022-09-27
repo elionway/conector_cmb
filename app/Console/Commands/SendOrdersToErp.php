@@ -188,14 +188,20 @@ class SendOrdersToErp extends Command
     {
         $address_number = $order['shipping']['custom_field'][Opencart::addressNumber()] ?? '';
 
+        $address_complement = $order['shipping']['custom_field'][Opencart::addressComplement()] ?? '';
+
         $ibgeInfo = $this->ibge($order['shipping']['postcode']);
+
+        $address = "{$order['shipping']['address_1']}, {$address_number} {$address_complement}";
+
+        $address = preg_replace('/[^a-zA-Z0-9_ \-\.\/]/s','', $address);
 
         return [
             'CL_APLIC' => 'ECMB',
             'CL_STATUS' => 'M',
             'CL_CPFCNPJ' => $this->document($order['custom_fields']),
-            'CL_END' => "{$order['shipping']['address_1']}, {$address_number}, {$order['shipping']['address_2']}",
-            'CL_BAIRRO' => $order['shipping']['custom_field'][Opencart::neighborhood()] ?? '',
+            'CL_END' => $address,
+            'CL_BAIRRO' => $order['shipping']['address_2'],
             'CL_CEP' => $order['shipping']['postcode'],
             'CL_DDD' => $this->ddd($order['telephone']),
             'CL_TEL' => $this->telephone($order['telephone']),
@@ -271,12 +277,12 @@ class SendOrdersToErp extends Command
         $data = [
             'all' => [
                 'amount' => $amountAll,
-                'weight' => $weightAll,
+                'weight' => $weightAll ?? 1,
             ],
             'nonbc' => [
                 'prefix' => '4',
                 'amount' => $amountAll,
-                'weight' => $weightAll,
+                'weight' => $weightAll ?? 1,
             ],
         ];
 
@@ -314,10 +320,10 @@ class SendOrdersToErp extends Command
                 'TI_CPFCNPJ' => $this->document($order['custom_fields']),
                 'TI_CC' => 'H2104',
                 'TI_EMISSAO' => Carbon::parse($order['date_added'])->format('Ymd'),
-                'TI_VENCTO' => Carbon::createFromFormat('d/m/Y', $order['payment']['transaction']['due_date'])->format('Ymd'),
+                // 'TI_VENCTO' => Carbon::createFromFormat('d/m/Y', $order['payment']['transaction']['due_date'])->format('Ymd'),
                 'TI_VALOR' => $bill['amount'],
                 'TI_XOBS' => $order['order_id'],
-                'TI_DTPAG' => Carbon::createFromFormat('d/m/Y', $order['payment']['transaction']['paid_date'])->format('Ymd'),
+                // 'TI_DTPAG' => Carbon::createFromFormat('d/m/Y', $order['payment']['transaction']['paid_date'])->format('Ymd'),
                 'TI_STATUS' => 'M',
                 'TI_FRETE' => $bill['shipping_amount'],
                 'TI_CNS' => '',
@@ -354,7 +360,7 @@ class SendOrdersToErp extends Command
             'PV_CPFCNPJ' => $this->document($order['custom_fields']),
             'PV_UF' => $order['shipping']['zone_code'],
             'PV_NUMPED' => $this->orderId($order['order_id']),
-            'PV_CODPR' => $product['product_id'],
+            'PV_CODPR' => $product['options'][0]['sku'] ?? $product['sku'],
             'PV_DTHORA' => Carbon::now()->format('Y-m-d H:i:s'),
             'PV_STATUS' => 'M',
             'PV_TES' => $this->tesCode($order, $product),
