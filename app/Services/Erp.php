@@ -66,7 +66,7 @@ class Erp {
 
     private function updateCustomer(Cliente $customer, array $data)
     {
-        $customer->update($data);
+        Cliente::where('CL_CPFCNPJ', $data['CL_CPFCNPJ'])->update(['CL_END' => $data['CL_END']]);
     }
 
     private function storeCustomer(array $customer)

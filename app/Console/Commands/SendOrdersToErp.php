@@ -37,11 +37,12 @@ class SendOrdersToErp extends Command
         foreach ($orders as $order) {
             try {
                 $this->info($order['order_id']);
+                
                 Erp::createOrder($this->formatOrderDataToErp($order));
 
                 $this->updateOpencartOrderStatus($order['order_id']);
             } catch (\Throwable $th) {
-                $this->error($th->getMessage());
+                $this->error("{$th->getMessage()} - {$th->getFile()}:{$th->getLine()}");
             }
         }
     }
