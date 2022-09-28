@@ -10,7 +10,7 @@ class Faturado extends Model
 {
     use HasFactory;
 
-    protected $table = 'VIEW_FATURADOS';
+    protected $table = 'TBL_View_PedidosMedalhas_Faturados';
 
     protected $guarded = [];
 
