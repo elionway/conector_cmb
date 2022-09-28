@@ -5,7 +5,7 @@ return [
     'consumer_key' => env('OPENCART_CONSUMER_KEY', null),
     'consumer_secret' => env('OPENCART_CONSUMER_SECRET', null),
     'search_status' => [
-        'new_order' => 2,
+        'new_order' => 3,
         'after_dispatch_order' => 5,
         'invoiced_order' => 6,
         'in_dispatchment_order' => 4,

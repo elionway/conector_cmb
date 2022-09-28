@@ -35,10 +35,14 @@ class SendOrdersToErp extends Command
         $orders = Opencart::orders(['filter_status' => Opencart::searchStatuses('after_dispatch_order')]);
 
         foreach ($orders as $order) {
-            Erp::createOrder($this->formatOrderDataToErp($order));
-            
+            try {
+                $this->info($order['order_id']);
+                Erp::createOrder($this->formatOrderDataToErp($order));
 
-            $this->updateOpencartOrderStatus($order['order_id']);
+                $this->updateOpencartOrderStatus($order['order_id']);
+            } catch (\Throwable $th) {
+                $this->error($th->getMessage());
+            }
         }
     }
 
@@ -192,9 +196,13 @@ class SendOrdersToErp extends Command
 
         $ibgeInfo = $this->ibge($order['shipping']['postcode']);
 
-        $address = "{$order['shipping']['address_1']}, {$address_number} {$address_complement}";
+        $street = preg_replace('/[^a-zA-Z0-9_ \-\.\/]/s','', $order['shipping']['address_1']);
 
-        $address = preg_replace('/[^a-zA-Z0-9_ \-\.\/]/s','', $address);
+        $number = preg_replace('/[^a-zA-Z0-9_ \-\.\/]/s','', $address_number);
+
+        $complement = preg_replace('/[^a-zA-Z0-9_ \-\.\/]/s','', $address_complement);
+
+        $address = "{$street}, {$number} {$complement}";
 
         return [
             'CL_APLIC' => 'ECMB',
@@ -320,10 +328,10 @@ class SendOrdersToErp extends Command
                 'TI_CPFCNPJ' => $this->document($order['custom_fields']),
                 'TI_CC' => 'H2104',
                 'TI_EMISSAO' => Carbon::parse($order['date_added'])->format('Ymd'),
-                // 'TI_VENCTO' => Carbon::createFromFormat('d/m/Y', $order['payment']['transaction']['due_date'])->format('Ymd'),
+                'TI_VENCTO' => Carbon::createFromFormat('Y-m-d', $order['payment']['transaction']['due_date'])->format('Ymd'),
                 'TI_VALOR' => $bill['amount'],
                 'TI_XOBS' => $order['order_id'],
-                // 'TI_DTPAG' => Carbon::createFromFormat('d/m/Y', $order['payment']['transaction']['paid_date'])->format('Ymd'),
+                'TI_DTPAG' => $order['payment']['transaction']['paid_date'] ? Carbon::createFromFormat('Y-m-d', $order['payment']['transaction']['paid_date'])->format('Ymd') : '',
                 'TI_STATUS' => 'M',
                 'TI_FRETE' => $bill['shipping_amount'],
                 'TI_CNS' => '',

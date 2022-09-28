@@ -23,7 +23,7 @@ class Erp {
     public function createOrder(array $order)
     {
         DB::transaction(function () use ($order) {
-            $this->storeCustomerIfNotExists($order['customer']);
+            $this->createOrUpdateCustomer($order['customer']);
 
             $this->storeOrderItems($order['orders']);
 
@@ -51,13 +51,22 @@ class Erp {
         return $this->ibge_country;
     }
 
-    private function storeCustomerIfNotExists(array $customer)
+    private function createOrUpdateCustomer(array $data)
     {
-        $customer = Cliente::where('CL_CPFCNPJ', $customer['CL_CPFCNPJ'])->first();
+        $customer = Cliente::where('CL_CPFCNPJ', $data['CL_CPFCNPJ'])->first();
 
-        if (!$customer) {
-            $this->storeCustomer($customer);
+        if ($customer) {
+            $this->updateCustomer($customer, $data);
+
+            return;
         }
+
+        $this->storeCustomer($data);
+    }
+
+    private function updateCustomer(Cliente $customer, array $data)
+    {
+        $customer->update($data);
     }
 
     private function storeCustomer(array $customer)
