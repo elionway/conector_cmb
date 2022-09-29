@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Faturado;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Storage;
@@ -28,10 +29,11 @@ class Sexp {
 
     public function orderHasTrackingNumber(int $order_id): bool
     {
-        return !!$this->getOrderTrackingNumber($order_id);
+        return !!$this->getOrder($order_id);
     }
 
-    public function getOrderTrackingNumber(int $order_id): ?string
+
+    public function getOrder(int $order_id): ?string
     {
         $params = [
             'chaveUnica' => 'ECMB' . str_pad($order_id, 9, '0', STR_PAD_LEFT),
@@ -42,14 +44,43 @@ class Sexp {
 
         $order = $this->execute($params);
 
-        return $this->renderTrackingNumberFromRequest($order);
+        return $this->renderOrderFromRequest($order);
     }
 
-    private function renderTrackingNumberFromRequest(array $response): ?string
+    public function updateInvoicedOrder(int $order_id, Faturado $invoice)
     {
-        $package = $response['soap:Envelope']['soap:Body']['ns2:consultarRemessaResponse']['informacoesRemessa'];
+        $params = $this->parseUpdateOrderParams($order_id, $invoice);
 
-        return $package['numeroPostagem'] ?? null;
+        $this->execute($params);
+    }
+
+    private function parseUpdateOrderParams(int $order_id, Faturado $invoice): array
+    {
+        return [
+            'soapenv:Envelope' => [
+                '@attributes' => [
+                    'xmlns:soapenv' => 'http://schemas.xmlsoap.org/soap/envelope/',
+                    'xmlns:ws' => 'http://ws.sexpwebservice.cmb.gov.br/',
+                ],
+                'soapenv:Body' => [
+                    'ws:informarNF' => [
+                        'chaveUnica' => 'ECMB' . str_pad($order_id, 9, '0', STR_PAD_LEFT),
+                        'codigoProduto' => '803479',
+                        'notaFiscal' => [
+                            'data' => Carbon::createFromFormat('Ymd', $invoice['EMISSAO'])->format('Y-m-d'),
+                            'numero' => $invoice['NOTA'],
+                            'serie' => $invoice['SERIE'],
+                            'valor' => $invoice['VALOR'],
+                        ],
+                    ],
+                ],
+            ],
+        ];
+    }
+
+    private function renderOrderFromRequest(array $response): ?string
+    {
+        return $response['soap:Envelope']['soap:Body']['ns2:consultarRemessaResponse']['informacoesRemessa'];
     }
 
     public function addressSettings(): array

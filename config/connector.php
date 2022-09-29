@@ -9,12 +9,14 @@ return [
         'after_dispatch_order' => 5,
         'invoiced_order' => 6,
         'in_dispatchment_order' => 4,
+        'sent_invoiced_to_sexp_order' => 20,
     ],
     'update_status' => [
         'integrated_sexp_order' => 4,
         'dispatched_order' => 5,
         'in_invoicement_order' => 6,
         'finished_order' => 7,
+        'sent_invoiced_to_sexp_order' => 20,
     ],
     'custom_fields' => [
         'cnpj' => 'CNPJ',
