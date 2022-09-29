@@ -33,7 +33,7 @@ class Sexp {
     }
 
 
-    public function getOrder(int $order_id): ?string
+    public function getOrder(int $order_id): array
     {
         $params = [
             'chaveUnica' => 'ECMB' . str_pad($order_id, 9, '0', STR_PAD_LEFT),
@@ -47,15 +47,19 @@ class Sexp {
         return $this->renderOrderFromRequest($order);
     }
 
-    public function updateInvoicedOrder(int $order_id, Faturado $invoice)
+    public function updateInvoicedOrder(array $order, Faturado $invoice)
     {
-        $params = $this->parseUpdateOrderParams($order_id, $invoice);
+        $order_id = $order['order_id'];
+
+        $params = $this->parseUpdateOrderParams($order, $invoice);
 
         $this->execute($params);
     }
 
-    private function parseUpdateOrderParams(int $order_id, Faturado $invoice): array
+    private function parseUpdateOrderParams(array $order, Faturado $invoice): array
     {
+        $order_id = $order['order_id'];
+
         return [
             'soapenv:Envelope' => [
                 '@attributes' => [
@@ -69,8 +73,8 @@ class Sexp {
                         'notaFiscal' => [
                             'data' => Carbon::createFromFormat('Ymd', $invoice['EMISSAO'])->format('Y-m-d'),
                             'numero' => $invoice['NOTA'],
-                            'serie' => $invoice['SERIE'],
-                            'valor' => $invoice['VALOR'],
+                            'serie' => trim($invoice['SERIE']),
+                            'valor' => $order['total'],
                         ],
                     ],
                 ],
@@ -78,7 +82,7 @@ class Sexp {
         ];
     }
 
-    private function renderOrderFromRequest(array $response): ?string
+    private function renderOrderFromRequest(array $response): array
     {
         return $response['soap:Envelope']['soap:Body']['ns2:consultarRemessaResponse']['informacoesRemessa'];
     }

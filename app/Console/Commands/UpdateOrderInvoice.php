@@ -34,7 +34,7 @@ class UpdateOrderInvoice extends Command
 
         foreach ($orders as $order) {
             if ($invoiced = Erp::find($order['order_id'])) {
-                Sexp::updateInvoicedOrder($order['order_id'], $invoiced);
+                Sexp::updateInvoicedOrder($order, $invoiced);
 
                 $this->updateOpencartOrderStatus($order['order_id']);
             }

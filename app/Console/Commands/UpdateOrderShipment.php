@@ -7,14 +7,14 @@ use App\Support\Opencart;
 use App\Support\Sexp;
 use Illuminate\Console\Command;
 
-class UpdateOrderShipping extends Command
+class UpdateOrderShipment extends Command
 {
     /**
      * The name and signature of the console command.
      *
      * @var string
      */
-    protected $signature = 'orders:update:shipping';
+    protected $signature = 'orders:update:shipment';
 
     /**
      * The console command description.
