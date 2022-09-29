@@ -396,7 +396,9 @@ class SendOrdersToErp extends Command
 
     private function packageDescription(array $order, array $packageType): string
     {
-        $tracking_number = Sexp::getOrderTrackingNumber($order['order_id']);
+        $sexpOrder = Sexp::getOrder($order['order_id']);
+
+        $tracking_number = $sexpOrder['numeroPostagem'];
 
         return "{$tracking_number}(" . number_format($packageType["width"], 3, '.', '') . "x" . number_format($packageType["height"], 3, '.', '') . "x" . number_format($packageType["length"], 3, '.', '') . "x" . number_format($this->totalWeight($order, $packageType['weight']), 3, '.', '') . ")";
     }
