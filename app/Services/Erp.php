@@ -71,7 +71,17 @@ class Erp {
 
     private function storeCustomer(array $customer)
     {
-        Cliente::create($customer);
+        $client = new Cliente();
+
+        foreach ($customer as $key => $value) {
+            if ($key == 'CL_CEP') {
+                $value = preg_replace("/[^0-9]/", "", $value);
+            }
+
+            $client->$key = $value;
+        }
+
+        $client->save();
     }
 
     private function storeOrderItems(array $items)

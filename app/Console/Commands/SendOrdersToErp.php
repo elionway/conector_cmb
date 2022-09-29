@@ -321,6 +321,14 @@ class SendOrdersToErp extends Command
         $data = [];
 
         foreach ($bills as $bill) {
+            $dueDate = $order['payment']['transaction']['due_date'] 
+                ? Carbon::createFromFormat('Y-m-d', $order['payment']['transaction']['due_date'])->format('Ymd')
+                : Carbon::now()->format('Ymd');
+
+            $paidDate = $order['payment']['transaction']['paid_date'] 
+                ? Carbon::createFromFormat('Y-m-d', $order['payment']['transaction']['paid_date'])->format('Ymd')
+                : Carbon::now()->format('Ymd');
+
             $data[] = [
                 'TI_APLIC' => Erp::applicationCode(),
                 'TI_PREFIXO' => $bill['prefix'],
@@ -329,10 +337,10 @@ class SendOrdersToErp extends Command
                 'TI_CPFCNPJ' => $this->document($order['custom_fields']),
                 'TI_CC' => 'H2104',
                 'TI_EMISSAO' => Carbon::parse($order['date_added'])->format('Ymd'),
-                'TI_VENCTO' => Carbon::createFromFormat('Y-m-d', $order['payment']['transaction']['due_date'])->format('Ymd'),
+                'TI_VENCTO' => $dueDate,
                 'TI_VALOR' => $bill['amount'],
                 'TI_XOBS' => $order['order_id'],
-                'TI_DTPAG' => $order['payment']['transaction']['paid_date'] ? Carbon::createFromFormat('Y-m-d', $order['payment']['transaction']['paid_date'])->format('Ymd') : '',
+                'TI_DTPAG' => $paidDate,
                 'TI_STATUS' => 'M',
                 'TI_FRETE' => $bill['shipping_amount'],
                 'TI_CNS' => '',
