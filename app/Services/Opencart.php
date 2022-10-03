@@ -70,12 +70,35 @@ class Opencart {
     {
         $response = $this->execute('order', 'get', null, $queryParams);
 
-        return collect($response['records'] ?? []);
+        $orders = [];
+
+        if(!empty($response['records'])){
+            $orders = $response['records'];
+            foreach($orders as $k => $order){
+                $orders[$k] = $this->prepareOrder($order);
+            }
+        }
+        return collect($orders);
     }
 
     public function order(string|int $order_id)
     {
-        $response = $this->execute("order/{$order_id}");
+        $order = $this->execute("order/{$order_id}");
+        $response = $this->prepareOrder($order);
+    }
+
+    public function prepareOrder(array $order): array
+    {
+        if(!empty($order['shipping']['postcode'])){
+            $order['shipping']['postcode'] 
+                = preg_replace('/[^0-9]/','', $order['shipping']['postcode']);
+        }
+        if(!empty($order['payment']['postcode'])){
+            $order['payment']['postcode'] 
+                = preg_replace('/[^0-9]/','', $order['payment']['postcode']);
+        }
+
+       return $order;
     }
 
     public function orderHistory(string|int $order_id, array $data)
