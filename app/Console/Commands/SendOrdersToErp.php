@@ -37,7 +37,7 @@ class SendOrdersToErp extends Command
         foreach ($orders as $order) {
             try {
                 $this->info($order['order_id']);
-                
+
                 Erp::createOrder($this->formatOrderDataToErp($order));
 
                 $this->updateOpencartOrderStatus($order['order_id']);
@@ -150,13 +150,34 @@ class SendOrdersToErp extends Command
 
         $paymentCodes = [
             'cielo_api_boleto' => '010',
-            'cielo_api_debito' => '010',
-            'cielo_api_credito' => '30',
+            'cielo_api_debito' => '071',
+            'cielo_api_credito' => [
+                '1' => '072',
+                '2' => '073',
+                '3' => '074',
+                '4' => '075',
+                '5' => '076',
+                '6' => '077',
+            ],
         ];
 
+        $orderPaymentMethod = $order['payment']['transaction']['payment_code'] ?? 'cielo_api_boleto';
+
+        $paymentCode = $paymentCodes[$orderPaymentMethod];
+
+        if (is_array($paymentCode)) {
+            $installment = $paymentCode[$order['payment']['transaction']['installments']];
+
+            if (!in_array($installment, [1, 2, 3, 4, 5, 6])) {
+                $installment = 1;
+            }
+
+            $paymentCode = $paymentCode[$installment];
+        }
+
         return [
-            'paymentMethod' => $paymentMethods[$order['payment']['method']] ?? 1,
-            'paymentCode' => $paymentCodes[$order['payment']['method']] ?? '010',
+            'paymentMethod' => $paymentMethods[$orderPaymentMethod] ?? 1,
+            'paymentCode' => $paymentCode
         ];
     }
 
