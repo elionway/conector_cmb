@@ -29,9 +29,10 @@ class Sexp {
 
     public function orderHasTrackingNumber(int $order_id): bool
     {
-        return !!$this->getOrder($order_id);
-    }
+        $order = $this->getOrder($order_id);
 
+        return $order['status']['codigo'] == '3';
+    }
 
     public function getOrder(int $order_id): array
     {

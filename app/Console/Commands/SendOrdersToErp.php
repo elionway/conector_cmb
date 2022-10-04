@@ -108,15 +108,21 @@ class SendOrdersToErp extends Command
 
     private function messageAr(array $order, array $product): string
     {
+        $message = "PAM {$order['payment']['transaction']['payment_id']} PED {$this->orderId($order['order_id'])}";
+
+        if ($order['payment']['transaction']['tid']) {
+            $message .= " TID {$order['payment']['transaction']['tid']}";
+        }
+
         if ($this->hasBc($order['products'])) {
-            return "PAM {$order['payment']['transaction']['payment_id']} PED {$this->orderId($order['order_id'])} Contrato Nº 50553/2016  entre Casa da Moeda do Brasil e Banco Central. Operação com Imunidade tributária estabelecida pelo art.150, VI, a, CRFB/88 e isenta de ICMS conforme Convênio ICMS 01/91.";
+            return "{$message} Contrato Nº 50553/2016  entre Casa da Moeda do Brasil e Banco Central. Operação com Imunidade tributária estabelecida pelo art.150, VI, a, CRFB/88 e isenta de ICMS conforme Convênio ICMS 01/91.";
         }
 
         if ($this->tesCode($order, $product) === '504') {
-            return "PAM {$order['payment']['transaction']['payment_id']} PED {$this->orderId($order['order_id'])} ICMS - ISENTO COM BASE NO CONVENIO 01/91 ";
+            return "{$message} ICMS - ISENTO COM BASE NO CONVENIO 01/91 ";
         }
 
-        return "PAM {$order['payment']['transaction']['payment_id']} PED {$this->orderId($order['order_id'])} ";
+        return "{$message} ";
     }
 
     private function orderId($order_id): string
@@ -144,8 +150,8 @@ class SendOrdersToErp extends Command
     {
         $paymentMethods = [
             'cielo_api_boleto' => 1,
-            'cielo_api_debito' => 2,
-            'cielo_api_credito' => 3,
+            'cielo_api_debito' => 3,
+            'cielo_api_credito' => 4,
         ];
 
         $paymentCodes = [

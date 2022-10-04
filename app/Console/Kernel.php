@@ -23,7 +23,7 @@ class Kernel extends ConsoleKernel
 
         $schedule->command('orders:update:invoice')->everyMinute();
 
-        $schedule->command('orders:update:shipping')->everyMinute();
+        $schedule->command('orders:update:shipment')->everyMinute();
     }
 
     /**
