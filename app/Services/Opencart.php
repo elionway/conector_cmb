@@ -98,6 +98,16 @@ class Opencart {
                 = preg_replace('/[^0-9]/','', $order['payment']['postcode']);
         }
 
+        if(!empty($order['shipping']['custom_field'][Opencart::addressComplement()])){
+            $order['shipping']['custom_field'][Opencart::addressComplement()] 
+                = substr($order['shipping']['custom_field'][Opencart::addressComplement()] ,0,19);
+        }
+
+        if(!empty($order['payment']['custom_field'][Opencart::addressComplement()])){
+            $order['payment']['custom_field'][Opencart::addressComplement()] 
+                = substr($order['payment']['custom_field'][Opencart::addressComplement()] ,0,19);
+        }
+
        return $order;
     }
 
