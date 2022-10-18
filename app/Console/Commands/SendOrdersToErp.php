@@ -434,7 +434,7 @@ class SendOrdersToErp extends Command
         $sexpOrder = Sexp::getOrder($order['order_id']);
 
         $tracking_number = $sexpOrder['numeroPostagem'];
-
+        
         return "{$tracking_number}(" . number_format($packageType["width"], 3, '.', '') . "x" . number_format($packageType["height"], 3, '.', '') . "x" . number_format($packageType["length"], 3, '.', '') . "x" . number_format($this->totalWeight($order, $packageType['weight']), 3, '.', '') . ")";
     }
 
@@ -487,10 +487,10 @@ class SendOrdersToErp extends Command
 
     private function document(array $custom_fields): string | null
     {
-        $document = isset($custom_fields[Opencart::cpf()]) 
+        $document = !empty($custom_fields[Opencart::cpf()]) 
             ? $custom_fields[Opencart::cpf()] 
             : (
-                isset($custom_fields[Opencart::cnpj()])
+                !empty($custom_fields[Opencart::cnpj()])
                 ? $custom_fields[Opencart::cnpj()]
                 : null
             );
