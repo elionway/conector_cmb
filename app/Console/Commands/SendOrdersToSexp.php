@@ -111,7 +111,7 @@ class SendOrdersToSexp extends Command
             'idServico' => 12,
             'nomeCliente' => $order['firstname'] . ' ' . $order['lastname'],
             'codigoCliente' => 1,
-            'quantidade' => '1',
+            'quantidade' => $this->totalProductQuantities($order['products']),
             'tipoEmbalagem' => 'CAIXA/PACOTE',
             'valor' => $order['total'],
             'altura' => $package['height'],
@@ -119,5 +119,16 @@ class SendOrdersToSexp extends Command
             'largura' => $package['width'],
             'peso' => $package['weight'],
         ];
+    }
+
+    private function totalProductQuantities(array $products): int
+    {
+        $quantity = 0;
+
+        foreach ($products as $product) {
+            $quantity += $product['quantity'];
+        }
+
+        return $quantity;
     }
 }
