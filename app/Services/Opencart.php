@@ -91,22 +91,97 @@ class Opencart {
     {
         if(!empty($order['shipping']['postcode'])){
             $order['shipping']['postcode'] 
-                = preg_replace('/[^0-9]/','', $order['shipping']['postcode']);
+                = preg_replace('/[^0-9]/','', substr($order['shipping']['postcode'],0,8));
         }
         if(!empty($order['payment']['postcode'])){
             $order['payment']['postcode'] 
-                = preg_replace('/[^0-9]/','', $order['payment']['postcode']);
+                = preg_replace('/[^0-9]/','', substr($order['payment']['postcode'],0,8));
         }
 
         if(!empty($order['shipping']['custom_field'][Opencart::addressComplement()])){
             $order['shipping']['custom_field'][Opencart::addressComplement()] 
-                = substr($order['shipping']['custom_field'][Opencart::addressComplement()] ,0,19);
+                = preg_replace('/[^a-zA-Z0-9_ \-\.\/]/s','', $this->cleanString(substr($order['shipping']['custom_field'][Opencart::addressComplement()] ,0,19)));
         }
 
         if(!empty($order['payment']['custom_field'][Opencart::addressComplement()])){
             $order['payment']['custom_field'][Opencart::addressComplement()] 
-                = substr($order['payment']['custom_field'][Opencart::addressComplement()] ,0,19);
+                = preg_replace('/[^a-zA-Z0-9_ \-\.\/]/s','', $this->cleanString(substr($order['payment']['custom_field'][Opencart::addressComplement()] ,0,19)));
         }
+
+        if(!empty($order['shipping']['custom_field'][Opencart::addressNumber()])){
+            $order['shipping']['custom_field'][Opencart::addressNumber()] 
+                = preg_replace('/[0-9]/s','', $this->cleanString(substr($order['shipping']['custom_field'][Opencart::addressNumber()] ,0,6)));
+        }
+
+        if(!empty($order['payment']['custom_field'][Opencart::addressNumber()])){
+            $order['payment']['custom_field'][Opencart::addressNumber()] 
+                = preg_replace('/[0-9]/s','', $this->cleanString(substr($order['payment']['custom_field'][Opencart::addressNumber()] ,0,6)));
+        }
+
+        if(!empty($order['shipping']['address_1'])){
+            $order['shipping']['address_1'] 
+                = preg_replace('/[^a-zA-Z0-9_ \-\.\/]/s','', $this->cleanString(substr($order['shipping']['address_1'],0,20)));
+        }
+        if(!empty($order['payment']['address_1'])){
+            $order['payment']['address_1'] 
+                = preg_replace('/[^a-zA-Z0-9_ \-\.\/]/s','', $this->cleanString(substr($order['payment']['address_1'],0,20)));
+        }
+
+        if(!empty($order['shipping']['address_2'])){
+            $order['shipping']['address_2'] 
+                = preg_replace('/[^a-zA-Z0-9_ \-\.\/]/s','', $this->cleanString(substr($order['shipping']['address_2'],0,20)));
+        }
+        if(!empty($order['payment']['address_2'])){
+            $order['payment']['address_2'] 
+                = preg_replace('/[^a-zA-Z0-9_ \-\.\/]/s','', $this->cleanString(substr($order['payment']['address_2'],0,20)));
+        }
+
+        if(!empty($order['shipping']['city'])){
+            $order['shipping']['city'] 
+                = preg_replace('/[^a-zA-Z0-9_ \-\.\/]/s','', $this->cleanString(substr($order['shipping']['city'],0,20)));
+        }
+        if(!empty($order['payment']['city'])){
+            $order['payment']['city'] 
+                = preg_replace('/[^a-zA-Z0-9_ \-\.\/]/s','', $this->cleanString(substr($order['payment']['city'],0,20)));
+        }
+
+        if(!empty($order['shipping']['company'])){
+            $order['shipping']['company'] 
+                = preg_replace('/[^a-zA-Z0-9_ \-\.\/]/s','', $this->cleanString(substr($order['shipping']['company'],0,20)));
+        }
+        if(!empty($order['payment']['company'])){
+            $order['payment']['company'] 
+                = preg_replace('/[^a-zA-Z0-9_ \-\.\/]/s','', $this->cleanString(substr($order['payment']['company'],0,20)));
+        }
+
+        if(!empty($order['shipping']['firstname'])){
+            $order['shipping']['firstname'] 
+                = preg_replace('/[^a-zA-Z0-9_ \-\.\/]/s','', $this->cleanString(substr($order['shipping']['firstname'],0,20)));
+        }
+        if(!empty($order['payment']['firstname'])){
+            $order['payment']['firstname'] 
+                = preg_replace('/[^a-zA-Z0-9_ \-\.\/]/s','', $this->cleanString(substr($order['payment']['firstname'],0,20)));
+        }
+
+        if(!empty($order['shipping']['lastname'])){
+            $order['shipping']['lastname'] 
+                = preg_replace('/[^a-zA-Z0-9_ \-\.\/]/s','', $this->cleanString(substr($order['shipping']['lastname'],0,20)));
+        }
+        if(!empty($order['payment']['lastname'])){
+            $order['payment']['lastname'] 
+                = preg_replace('/[^a-zA-Z0-9_ \-\.\/]/s','', $this->cleanString(substr($order['payment']['lastname'],0,20)));
+        }
+
+        if(!empty($order['firstname'])){
+            $order['firstname'] 
+                = preg_replace('/[^a-zA-Z0-9_ \-\.\/]/s','', $this->cleanString(substr($order['firstname'],0,20)));
+        }
+
+        if(!empty($order['lastname'])){
+            $order['lastname'] 
+                = preg_replace('/[^a-zA-Z0-9_ \-\.\/]/s','', $this->cleanString(substr($order['lastname'],0,20)));
+        }
+
 
        return $order;
     }
@@ -281,5 +356,29 @@ class Opencart {
         $is_settings_valid = config('connector.consumer_key') && config('connector.consumer_secret') && config('connector.opencart_url');
 
         throw_unless($is_settings_valid, new \Exception('As configurações estão inválidas'));
+    }
+
+    public function cleanString($text) {
+        $utf8 = array(
+            '/[áàâãªä]/u'   =>   'a',
+            '/[ÁÀÂÃÄ]/u'    =>   'A',
+            '/[ÍÌÎÏ]/u'     =>   'I',
+            '/[íìîï]/u'     =>   'i',
+            '/[éèêë]/u'     =>   'e',
+            '/[ÉÈÊË]/u'     =>   'E',
+            '/[óòôõºö]/u'   =>   'o',
+            '/[ÓÒÔÕÖ]/u'    =>   'O',
+            '/[úùûü]/u'     =>   'u',
+            '/[ÚÙÛÜ]/u'     =>   'U',
+            '/ç/'           =>   'c',
+            '/Ç/'           =>   'C',
+            '/ñ/'           =>   'n',
+            '/Ñ/'           =>   'N',
+            '/–/'           =>   '-', // UTF-8 hyphen to "normal" hyphen
+            '/[’‘‹›‚]/u'    =>   ' ', // Literally a single quote
+            '/[“”«»„]/u'    =>   ' ', // Double quote
+            '/ /'           =>   ' ', // nonbreaking space (equiv. to 0x160)
+        );
+        return preg_replace(array_keys($utf8), array_values($utf8), $text);
     }
 }

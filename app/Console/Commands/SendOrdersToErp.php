@@ -211,7 +211,9 @@ class SendOrdersToErp extends Command
 
     private function ibge($postcode)
     {
-        $data = file_get_contents("https://viacep.com.br/ws/{$postcode}/json/");
+        //$data = file_get_contents("https://viacep.com.br/ws/{$postcode}/json/");
+
+        $data = file_get_contents("https://clubedamedalha.com.br/index.php?route=extension/module/ow_cep/getcep&cep={$postcode}");
 
         return json_decode($data, true);
     }
@@ -224,13 +226,11 @@ class SendOrdersToErp extends Command
 
         $ibgeInfo = $this->ibge($order['shipping']['postcode']);
 
-        $street = preg_replace('/[^a-zA-Z0-9_ \-\.\/]/s','', $order['shipping']['address_1']);
+        $street = $order['shipping']['address_1'];
 
-        $number = preg_replace('/[^a-zA-Z0-9_ \-\.\/]/s','', $address_number);
+        $fullname = $order['firstname'] . ' ' . $order['lastname'];
 
-        $complement = preg_replace('/[^a-zA-Z0-9_ \-\.\/]/s','', $address_complement);
-
-        $address = "{$street}, {$number} {$complement}";
+        $address = "{$street}, {$address_number} {$address_complement}"; 
 
         return [
             'CL_APLIC' => 'ECMB',
@@ -246,7 +246,7 @@ class SendOrdersToErp extends Command
             'CL_CODMUN' => substr($ibgeInfo['ibge'], -5), // required
             'CL_CODPAIS' => Erp::ibgeCountry(), // required
             'CL_INCCULT' => '2', // required
-            'CL_NOME' => $order['firstname'] . ' ' . $order['lastname'],
+            'CL_NOME' => $fullname,
             'CL_SIMPLES' => '2',
             'CL_PESSOA' => $order['custom_fields'][Opencart::cnpj()] ? 'J' : 'F',
             'CL_IEST' => $order['custom_fields'][Opencart::stateRegistration()] ?? '',
@@ -259,6 +259,25 @@ class SendOrdersToErp extends Command
             'CL_CODMSG' => '',
             'CL_COMLJ' => 'N',
         ];
+    }
+
+    private function validate(array $order): bool
+    {
+        $validated = true;
+
+        $ibgeInfo = $this->ibge($order['shipping']['postcode']);
+        if(
+            empty($ibgeInfo['ibge'])
+            ,|| empty($order['shipping']['zone_code'])
+            ,|| empty($order['shipping']['country'])
+            ,|| empty($order['shipping']['city'])
+            ,|| empty($order['shipping']['address_2'])
+        ) {
+            $validated = false;
+        }
+
+        return $validated;
+
     }
 
     private function shipping(array $totals): float
@@ -409,7 +428,7 @@ class SendOrdersToErp extends Command
             'PV_STATUS' => 'M',
             'PV_TES' => $this->tesCode($order, $product),
             'PV_QTDPED' => $product['quantity'],
-            'PV_PRUNIT' => $product['total'],
+            'PV_PRUNIT' => $product['price'],
             'PV_FTCONV' => 0,
             'PV_TPCONV' => '',
             'PV_CODMSG' => $product['cest'] == 3 ? '012' : '',
@@ -496,5 +515,29 @@ class SendOrdersToErp extends Command
             );
 
         return preg_replace('/[^0-9]/', '', $document);
+    }
+
+   public function cleanString($text) {
+        $utf8 = array(
+            '/[áàâãªä]/u'   =>   'a',
+            '/[ÁÀÂÃÄ]/u'    =>   'A',
+            '/[ÍÌÎÏ]/u'     =>   'I',
+            '/[íìîï]/u'     =>   'i',
+            '/[éèêë]/u'     =>   'e',
+            '/[ÉÈÊË]/u'     =>   'E',
+            '/[óòôõºö]/u'   =>   'o',
+            '/[ÓÒÔÕÖ]/u'    =>   'O',
+            '/[úùûü]/u'     =>   'u',
+            '/[ÚÙÛÜ]/u'     =>   'U',
+            '/ç/'           =>   'c',
+            '/Ç/'           =>   'C',
+            '/ñ/'           =>   'n',
+            '/Ñ/'           =>   'N',
+            '/–/'           =>   '-', // UTF-8 hyphen to "normal" hyphen
+            '/[’‘‹›‚]/u'    =>   ' ', // Literally a single quote
+            '/[“”«»„]/u'    =>   ' ', // Double quote
+            '/ /'           =>   ' ', // nonbreaking space (equiv. to 0x160)
+        );
+        return preg_replace(array_keys($utf8), array_values($utf8), $text);
     }
 }
