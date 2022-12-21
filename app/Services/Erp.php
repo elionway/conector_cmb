@@ -20,12 +20,12 @@ class Erp {
         $this->ibge_country = config('connector.ibge_country');
     }
 
-    public function createOrder(array $order)
+    public function createOrUpdateOrder(array $order)
     {
         DB::transaction(function () use ($order) {
             $this->createOrUpdateCustomer($order['customer']);
 
-            $this->storeOrderItems($order['orders']);
+            $this->createOrUpdateItems($order['orders']);
 
             $this->storeBills($order['billing']);
         });
@@ -48,7 +48,7 @@ class Erp {
 
     public function ibgeCountry(): string
     {
-        return $this->ibge_country;
+        return str_pad($this->ibge_country, 5, "0", STR_PAD_LEFT);
     }
 
     private function createOrUpdateCustomer(array $data)
@@ -84,9 +84,17 @@ class Erp {
         $client->save();
     }
 
-    private function storeOrderItems(array $items)
+    private function createOrUpdateItems(array $items)
     {
         foreach ($items as $item) {
+            $pedido = Pedido::where('PV_NUMPED', $item['PV_NUMPED'])->first();
+
+            if ($pedido) {
+                Pedido::where('PV_NUMPED', $item['PV_NUMPED'])->update($item);
+
+                continue;
+            }
+
             Pedido::create($item);
         }
     }
@@ -94,6 +102,14 @@ class Erp {
     private function storeBills(array $bills)
     {
         foreach ($bills as $bill) {
+            $titulo = Titulo::where('TI_NUM', $bill['TI_NUM'])->where('TI_PREFIXO', $bill['TI_PREFIXO'])->first();
+
+            if ($titulo) {
+                Titulo::where('TI_NUM', $bill['TI_NUM'])->where('TI_PREFIXO', $bill['TI_PREFIXO'])->update($bill);
+
+                continue;
+            }
+
             Titulo::create($bill);
         }
     }

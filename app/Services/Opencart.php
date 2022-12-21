@@ -72,18 +72,26 @@ class Opencart {
 
         $orders = [];
 
-        if(!empty($response['records'])){
+        if (!empty($response['records'])) {
             $orders = $response['records'];
-            foreach($orders as $k => $order){
-                $orders[$k] = $this->prepareOrder($order);
+
+            foreach ($orders as $key => $order) {
+                $orders[$key] = $this->prepareOrder($order);
             }
         }
+
         return collect($orders);
     }
 
+    public function validateOrderInfo(array $order_info)
+    {
+        
+    }
+    
     public function order(string|int $order_id)
     {
         $order = $this->execute("order/{$order_id}");
+
         $response = $this->prepareOrder($order);
     }
 
@@ -91,11 +99,11 @@ class Opencart {
     {
         if(!empty($order['shipping']['postcode'])){
             $order['shipping']['postcode'] 
-                = preg_replace('/[^0-9]/','', substr($order['shipping']['postcode'],0,8));
+                = substr(preg_replace('/[^0-9]/s', '', $order['shipping']['postcode']), 0, 8);
         }
         if(!empty($order['payment']['postcode'])){
             $order['payment']['postcode'] 
-                = preg_replace('/[^0-9]/','', substr($order['payment']['postcode'],0,8));
+                = substr(preg_replace('/[^0-9]/s', '', $order['payment']['postcode']), 0, 8);
         }
 
         if(!empty($order['shipping']['custom_field'][Opencart::addressComplement()])){
@@ -110,12 +118,16 @@ class Opencart {
 
         if(!empty($order['shipping']['custom_field'][Opencart::addressNumber()])){
             $order['shipping']['custom_field'][Opencart::addressNumber()] 
-                = preg_replace('/[0-9]/s','', $this->cleanString(substr($order['shipping']['custom_field'][Opencart::addressNumber()] ,0,6)));
+                = preg_replace('/[^0-9]/s','', $this->cleanString(substr($order['shipping']['custom_field'][Opencart::addressNumber()] ,0,6)));
+        } else {
+            $order['shipping']['custom_field'][Opencart::addressNumber()] = 0;
         }
 
         if(!empty($order['payment']['custom_field'][Opencart::addressNumber()])){
             $order['payment']['custom_field'][Opencart::addressNumber()] 
-                = preg_replace('/[0-9]/s','', $this->cleanString(substr($order['payment']['custom_field'][Opencart::addressNumber()] ,0,6)));
+                = preg_replace('/[^0-9]/s','', $this->cleanString(substr($order['payment']['custom_field'][Opencart::addressNumber()] ,0,6)));
+        } else {
+            $order['payment']['custom_field'][Opencart::addressNumber()] = 0;
         }
 
         if(!empty($order['shipping']['address_1'])){

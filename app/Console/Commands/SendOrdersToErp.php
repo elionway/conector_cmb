@@ -8,6 +8,7 @@ use App\Support\Sexp;
 use Carbon\Carbon;
 use Illuminate\Console\Command;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Cache;
 
 class SendOrdersToErp extends Command
 {
@@ -38,7 +39,7 @@ class SendOrdersToErp extends Command
             try {
                 $this->info($order['order_id']);
 
-                Erp::createOrder($this->formatOrderDataToErp($order));
+                Erp::createOrUpdateOrder($this->formatOrderDataToErp($order));
 
                 $this->updateOpencartOrderStatus($order['order_id']);
             } catch (\Throwable $th) {
@@ -52,7 +53,7 @@ class SendOrdersToErp extends Command
         Opencart::orderHistory($order_id, [
             'order_status_id' => Opencart::updateStatuses('in_invoicement_order'),
             'comment' => 'Em faturamento',
-            'notify' => true,
+            'notify' => false,
         ]);
     }
 
@@ -213,7 +214,21 @@ class SendOrdersToErp extends Command
     {
         //$data = file_get_contents("https://viacep.com.br/ws/{$postcode}/json/");
 
-        $data = file_get_contents("https://clubedamedalha.com.br/index.php?route=extension/module/ow_cep/getcep&cep={$postcode}");
+        $data = Cache::get($postcode);
+
+        if (!$data) {
+            $data = file_get_contents("https://clubedamedalha.com.br/index.php?route=extension/module/ow_cep/getcep&cep={$postcode}");
+
+            $duration = 60 * 60 * 24 * 7;
+
+            Cache::set($postcode, $data, $duration);
+        }
+
+        $response = json_decode($data, true);
+
+        if (!$response || !empty($response['erro'])) {
+            return [];
+        }
 
         return json_decode($data, true);
     }
@@ -225,6 +240,8 @@ class SendOrdersToErp extends Command
         $address_complement = $order['shipping']['custom_field'][Opencart::addressComplement()] ?? '';
 
         $ibgeInfo = $this->ibge($order['shipping']['postcode']);
+
+        throw_if(!$ibgeInfo, new \Exception("Erro ao consultar dados do IBGE"));
 
         $street = $order['shipping']['address_1'];
 
@@ -268,10 +285,10 @@ class SendOrdersToErp extends Command
         $ibgeInfo = $this->ibge($order['shipping']['postcode']);
         if(
             empty($ibgeInfo['ibge'])
-            ,|| empty($order['shipping']['zone_code'])
-            ,|| empty($order['shipping']['country'])
-            ,|| empty($order['shipping']['city'])
-            ,|| empty($order['shipping']['address_2'])
+            || empty($order['shipping']['zone_code'])
+            || empty($order['shipping']['country'])
+            || empty($order['shipping']['city'])
+            || empty($order['shipping']['address_2'])
         ) {
             $validated = false;
         }

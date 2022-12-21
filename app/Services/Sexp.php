@@ -10,6 +10,7 @@ use LaLit\Array2XML;
 use LaLit\XML2Array;
 use \Exception;
 use Carbon\Carbon;
+use Illuminate\Support\Str;
 
 
 class Sexp {
@@ -129,6 +130,11 @@ class Sexp {
         return $params;
     }
 
+    private function isCreatingOrder(string $xml): bool
+    {
+        return Str::contains($xml, 'incluirRemessa');
+    }
+
     private function execute(array $params)
     {
         $params = $this->createXmlFromArray($params);
@@ -142,7 +148,7 @@ class Sexp {
         ->withBody($params, 'text/xml')
         ->post($url);
 
-        $this->log($url, $request, $params);
+        $this->log($url, $request, $params, $this->isCreatingOrder($params));
 
         throw_if($request->failed(), new Exception($request->body()));
 
@@ -151,19 +157,27 @@ class Sexp {
         return XML2Array::createArray($response);
     }
 
-    private function log(string $url, Response $response, ?string $params = '')
+    private function log(string $url, Response $response, ?string $params = '',  bool $isCreatingOrder)
     {
-        $log_data = [
+        $logData = [
             'url' => $url,
             'body' => $response->body(),
             'params' => $params,
         ];
 
-        $stringfied_data = json_encode($log_data);
+        $stringfiedData = json_encode($logData);
 
-        $key = Carbon::now()->format('YmdHis') . '-' . md5($stringfied_data . time());
+        $key = Carbon::now()->format('YmdHis') . '-' . md5($stringfiedData . time());
 
-        Storage::put("api-calls/sexp/{$key}.txt", $stringfied_data);
+        $slugedUrl = Str::slug($url);
+
+        $path = "api-calls/sexp/{$key}.txt";
+
+        if ($isCreatingOrder) {
+            $path = "api-calls/sexp/creating/{$key}.txt";
+        }
+
+        Storage::put($path, $stringfiedData);
     }
 
     private function createXmlFromArray(array $params): string

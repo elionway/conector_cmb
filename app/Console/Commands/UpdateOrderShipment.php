@@ -49,7 +49,9 @@ class UpdateOrderShipment extends Command
             'order_status_id' => Opencart::updateStatuses('finished_order'),
             'comment' => "
                 Seu <b>pedido {$orderId}</b> foi enviado. <br/> 
-                <b>Código de Rastreamento:</b> <a href='https://cmb.pontualcargo.com.br/?codigoRastreamento={$trackingNumber}' target='_blank'>{$trackingNumber}</a> <br /> 
+                Código de Rastreamento: 
+                <b>Código de Rastreamento:</b> {$trackingNumber} <a href='https://cmb.pontualcargo.com.br/?codigoRastreamento={$trackingNumber}' target='_blank'>Clique aqui para acompanhamento</a>, ou utilize a URL abaixo.<br /> 
+                <a href='https://cmb.pontualcargo.com.br/?codigoRastreamento={$trackingNumber}' target='_blank'>{$trackingNumber}</a>
                 <b>Número da Nota Fiscal:</b> {$invoiceNumber}
             ",
             'notify' => true,

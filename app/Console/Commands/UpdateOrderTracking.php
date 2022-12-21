@@ -43,7 +43,7 @@ class UpdateOrderTracking extends Command
         Opencart::orderHistory($order_id, [
             'order_status_id' => Opencart::updateStatuses('dispatched_order'),
             'comment' => 'Enviado para separação',
-            'notify' => true,
+            'notify' => false,
         ]);
     }
 }

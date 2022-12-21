@@ -33,13 +33,20 @@ class SendOrdersToSexp extends Command
 
         foreach ($orders as $order) {
             try {
-                Sexp::createOrder($this->formatOrderDataToSexp($order));
+                Sexp::getOrder($order['order_id']);
 
                 $this->updateOpencartOrderStatus($order['order_id']);
+
+                $this->info("{$order['order_id']} - O pedido já existe no SEXP");
             } catch (\Throwable $th) {
-                $this->info("{$order['order_id']} - Falhou: {$th->getMessage()}");
+                try {
+                    Sexp::createOrder($this->formatOrderDataToSexp($order));
+    
+                    $this->updateOpencartOrderStatus($order['order_id']);
+                } catch (\Throwable $th) {
+                    $this->error("{$order['order_id']} - Falhou: {$th->getMessage()}");
+                }
             }
-            
         }
     }
 
