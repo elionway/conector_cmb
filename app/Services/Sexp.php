@@ -6,6 +6,8 @@ use App\Models\Faturado;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\File;
 use LaLit\Array2XML;
 use LaLit\XML2Array;
 use \Exception;
@@ -23,15 +25,21 @@ class Sexp {
 
     public function createOrder(array $order)
     {
-        $params = $this->parseCreateOrderParams($order);
+
+        $order_prepared = $this->formatOrderDataToSexp($order);
+
+        $params = $this->parseCreateOrderParams($order_prepared);
+        self::logSendSexp('CREATE PACOTE: '.$order['order_id']);
 
         $this->execute($params);
+
     }
 
     public function orderHasTrackingNumber(int $order_id): bool
     {
         $order = $this->getOrder($order_id);
-
+        
+       # dd($order);
         return $order['status']['codigo'] == '3';
     }
 
@@ -45,17 +53,24 @@ class Sexp {
         $params = $this->parseSearchOrderParams($params);
 
         $order = $this->execute($params);
-
-        return $this->renderOrderFromRequest($order);
+       
+        $response = $this->renderOrderFromRequest($order);
+        //dd($response);
+        return $response;
     }
 
     public function updateInvoicedOrder(array $order, Faturado $invoice)
     {
         $order_id = $order['order_id'];
 
-        $params = $this->parseUpdateOrderParams($order, $invoice);
-
-        $this->execute($params);
+        $params = $this->parseUpdateOrderParams($order, $invoice);        
+        
+        try{
+            $this->execute($params);
+            self::logSendSexp('UPDATE: '.$order_id);
+        }catch (\Throwable $th) {
+            self::logSendSexp('FALHA NO UPDATE: '.$order_id);
+        }        
     }
 
     private function parseUpdateOrderParams(array $order, Faturado $invoice): array
@@ -86,6 +101,7 @@ class Sexp {
 
     private function renderOrderFromRequest(array $response): array
     {
+        //return [];
         return $response['soap:Envelope']['soap:Body']['ns2:consultarRemessaResponse']['informacoesRemessa'];
     }
 
@@ -137,6 +153,7 @@ class Sexp {
 
     private function execute(array $params)
     {
+        //return  [];
         $params = $this->createXmlFromArray($params);
 
         $url = 'http://192.168.250.75/sexp-ws/SexpWS?wsdl';
@@ -157,7 +174,7 @@ class Sexp {
         return XML2Array::createArray($response);
     }
 
-    private function log(string $url, Response $response, ?string $params = '',  bool $isCreatingOrder)
+    private function log(string $url, Response $response, ?string $params = '',  bool $isCreatingOrder = false)
     {
         $logData = [
             'url' => $url,
@@ -186,4 +203,96 @@ class Sexp {
 
         return str_replace(['<RootNode>', '</RootNode>'], ['', ''], $xml);
     }
+
+    private function address(): array
+    {
+        $address = Sexp::addressSettings();
+
+        return [
+            'bairro' => $address['neighborhood'],
+            'cep' => $address['postcode'],
+            'cidade' => $address['city'],
+            'complemento' => '',
+            'numero' => $address['number'],
+            'rua' => $address['address'],
+            'uf' => $address['state_code'],
+        ];
+    }
+
+    private function package(array $order): array
+    {
+        $package['height'] = 0;
+
+        $package['length'] = 0;
+
+        $package['width'] = 0;
+
+        $package['weight'] = 0;
+
+        foreach ($order['products'] as $product) {
+            $package['weight'] += $product['weight'] * $product['quantity'];
+
+            $package['height'] += $product['height'] * $product['quantity'];
+
+            $package['length'] += $product['length'] * $product['quantity'];
+
+            $package['width'] += $product['width'] * $product['quantity'];
+        }
+
+        return $package;
+    }
+
+    private function formatOrderDataToSexp(array $order): array
+    {
+        $package = $this->package($order);
+
+        return [
+            'chaveUnica'      => 'ECMB' . str_pad($order['order_id'], 9, '0', STR_PAD_LEFT),
+            'codigoProduto'   => '803479',
+            'enderecoDevolucao' => $this->address(),
+            'enderecoPrincipal' => [
+                'bairro'      => Erp::prepareDistrict($order),                
+                'cep'         => Erp::preparePostcode($order),
+                'cidade'      => Erp::prepareCity($order),
+                'complemento' => Erp::prepareAddressComplement($order),
+                'numero'      => (string)Erp::prepareAddressNumber($order),
+                'rua'         => Erp::prepareAddressStreet($order),
+                'uf'          => Erp::prepareState($order),
+            ],
+            'idServico'       => 12,
+            'nomeCliente'     => Erp::prepareFullname($order),
+            'codigoCliente'   => 1,
+            'quantidade'      => $this->totalProductQuantities($order['products']),
+            'tipoEmbalagem'   => 'CAIXA/PACOTE',
+            'valor'           => $order['total'],
+            'altura'          => number_format((float)$package['height'], 3, '.', ''),
+            'comprimento'     => number_format((float)$package['length'], 3, '.', ''),
+            'largura'         => number_format((float)$package['width'] , 3, '.', ''),
+            'peso'            => number_format((float)$package['weight'], 3, '.', ''),
+        ];
+    }
+
+
+    private function totalProductQuantities(array $products): int
+    {
+        $quantity = 0;
+
+        foreach ($products as $product) {
+            $quantity += $product['quantity'];
+        }
+
+        return $quantity;
+    }
+
+    public static function logSendSexp(string $log)
+    {
+        var_dump($log);
+
+        $log = date("Y-m-d h:i:sa")." - ".$log ;
+        $log = $log . PHP_EOL;
+        File::append(
+            storage_path('/logs/send_sexp.log'), $log
+       );
+    }
+
 }

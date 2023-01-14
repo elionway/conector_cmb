@@ -6,6 +6,9 @@ use App\Support\Erp;
 use App\Support\Opencart;
 use App\Support\Sexp;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\File;
 
 class UpdateOrderInvoice extends Command
 {
@@ -43,10 +46,24 @@ class UpdateOrderInvoice extends Command
 
     private function updateOpencartOrderStatus(int $orderId)
     {
+        $this->log($orderId);
+
         Opencart::orderHistory($orderId, [
             'order_status_id' => Opencart::updateStatuses('sent_invoiced_to_sexp_order'),
             'comment' => "",
             'notify' => false,
         ]);
     }
+
+    public function log(string $log)
+    {
+        var_dump($log);
+
+        $log = date("Y-m-d h:i:sa")." - ".$log ;
+        $log = $log . PHP_EOL;
+        File::append(
+            storage_path('/logs/pedidos_faturados_aguardado_no_sexp.log'), $log
+       );
+    }
+
 }

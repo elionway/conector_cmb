@@ -5,6 +5,9 @@ namespace App\Console\Commands;
 use App\Support\Opencart;
 use App\Support\Sexp;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\File;
 
 class SendOrdersToSexp extends Command
 {
@@ -29,21 +32,29 @@ class SendOrdersToSexp extends Command
      */
     public function handle()
     {
+        #$orders = Opencart::orders(['filter_status' => Opencart::searchStatuses('with_error_item')]);
         $orders = Opencart::orders(['filter_status' => Opencart::searchStatuses('new_order')]);
 
         foreach ($orders as $order) {
+            sleep(2);
+
+            $this->info('Enviado ao SEXP: '.$order['order_id']);
+
             try {
+                var_dump('Encontrou order, vai altear o status '.$order['order_id']);
                 Sexp::getOrder($order['order_id']);
 
                 $this->updateOpencartOrderStatus($order['order_id']);
 
                 $this->info("{$order['order_id']} - O pedido já existe no SEXP");
             } catch (\Throwable $th) {
+                
                 try {
-                    Sexp::createOrder($this->formatOrderDataToSexp($order));
-    
-                    $this->updateOpencartOrderStatus($order['order_id']);
+                    var_dump('Criou order: ').$order['order_id'];
+                    Sexp::createOrder($order);    
+                   $this->updateOpencartOrderStatus($order['order_id']);
                 } catch (\Throwable $th) {
+                    var_dump('Erro na criação order: ').$order['order_id'];
                     $this->error("{$order['order_id']} - Falhou: {$th->getMessage()}");
                 }
             }
@@ -52,90 +63,26 @@ class SendOrdersToSexp extends Command
 
     private function updateOpencartOrderStatus(int $order_id)
     {
+        $this->log($order_id);
+
         Opencart::orderHistory($order_id,
          [
             'order_status_id' => Opencart::updateStatuses('integrated_sexp_order'),
-            'comment' => 'Recebido na expedição',
+            'comment' => 'Enviado para o SEXP',
             'notify' => false,
         ]);
     }
 
-    private function address(): array
+    public function log(string $log)
     {
-        $address = Sexp::addressSettings();
+        var_dump($log);
 
-        return [
-            'bairro' => $address['neighborhood'],
-            'cep' => $address['postcode'],
-            'cidade' => $address['city'],
-            'complemento' => '',
-            'numero' => $address['number'],
-            'rua' => $address['address'],
-            'uf' => $address['state_code'],
-        ];
+        $log = date("Y-m-d h:i:sa")." - ".$log ;
+        $log = $log . PHP_EOL;
+        File::append(
+            storage_path('/logs/pedidos_novos_enviados_ao_sexp.log'), $log
+       );
     }
 
-    private function package(array $order): array
-    {
-        $package['height'] = 0;
-
-        $package['length'] = 0;
-
-        $package['width'] = 0;
-
-        $package['weight'] = 0;
-
-        foreach ($order['products'] as $product) {
-            $package['weight'] += $product['weight'] * $product['quantity'];
-
-            $package['height'] += $product['height'] * $product['quantity'];
-
-            $package['length'] += $product['length'] * $product['quantity'];
-
-            $package['width'] += $product['width'] * $product['quantity'];
-        }
-
-        return $package;
-    }
-
-    private function formatOrderDataToSexp(array $order): array
-    {
-        $package = $this->package($order);
-
-        return [
-            'chaveUnica' => 'ECMB' . str_pad($order['order_id'], 9, '0', STR_PAD_LEFT),
-            'codigoProduto' => '803479',
-            'enderecoDevolucao' => $this->address(),
-            'enderecoPrincipal' => [
-                'bairro' => $order['shipping']['address_2'],
-                'cep' => $order['shipping']['postcode'],
-                'cidade' => $order['shipping']['city'],
-                'complemento' => $order['shipping']['custom_field'][Opencart::addressComplement()] ?? '',
-                'numero' => $order['shipping']['custom_field'][Opencart::addressNumber()] ?? '',
-                'rua' => $order['shipping']['address_1'],
-                'uf' => $order['shipping']['zone_code'],
-            ],
-            'idServico' => 12,
-            'nomeCliente' => $order['firstname'] . ' ' . $order['lastname'],
-            'codigoCliente' => 1,
-            'quantidade' => $this->totalProductQuantities($order['products']),
-            'tipoEmbalagem' => 'CAIXA/PACOTE',
-            'valor' => $order['total'],
-            'altura' => $package['height'],
-            'comprimento' => $package['length'],
-            'largura' => $package['width'],
-            'peso' => $package['weight'],
-        ];
-    }
-
-    private function totalProductQuantities(array $products): int
-    {
-        $quantity = 0;
-
-        foreach ($products as $product) {
-            $quantity += $product['quantity'];
-        }
-
-        return $quantity;
-    }
+    
 }

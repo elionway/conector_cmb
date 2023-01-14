@@ -15,15 +15,15 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule)
     {
-        $schedule->command('orders:send:sexp')->everyMinute();
+        #$schedule->command('orders:send:sexp')->everyMinute();
 
-        $schedule->command('orders:send:erp')->everyMinute();
+        $schedule->command('orders:send:erp')->everyFifteenMinutes();
 
-        $schedule->command('orders:update:tracking')->everyMinute();
+        $schedule->command('orders:update:tracking')->everyFifteenMinutes();
 
-        $schedule->command('orders:update:invoice')->everyMinute();
+        $schedule->command('orders:update:invoice')->everyFifteenMinutes();
 
-        $schedule->command('orders:update:shipment')->everyMinute();
+        $schedule->command('orders:update:shipment')->everyFifteenMinutes();
     }
 
     /**
