@@ -40,8 +40,6 @@ class Valid extends Model
             
             if(!empty(self::consultCepBrasilApi($postcode)['cep'])){
                 $consult = self::consultCepBrasilApi($postcode);
-                //var_dump('consultCepBrasilApi');
-                //var_dump($consult);
                 $data = [
                     "cep"        => self::onlyNumbers($consult['cep']??''),
                     "logradouro" => self::cleanString($consult['street']??''),
@@ -51,7 +49,6 @@ class Valid extends Model
                 ];
             }elseif(!empty(self::consultCepOwcep($postcode)['cep'])){
                 $consult = self::consultCepOwcep($postcode);
-                //var_dump('consultCepOwcep');
                 $data = [
                     "cep"        => self::onlyNumbers($consult['cep']??''),
                     "logradouro" => self::cleanString($consult['logradouro']??''),
@@ -61,7 +58,6 @@ class Valid extends Model
                 ];
             }elseif(!empty(self::consultCepViacep($postcode)['cep'])){
                 $consult = self::consultCepViacep($postcode);
-                ////var_dump('consultCepViacep');
                 $data = [
                     "cep"        => self::onlyNumbers($consult['cep']??''),
                     "logradouro" => self::cleanString($consult['logradouro']??''),
@@ -69,8 +65,6 @@ class Valid extends Model
                     "cidade"     => self::cleanString($consult['cidade']??''),
                     'uf'         => self::cleanString($consult['uf']??''),
                 ];
-            }else{
-                ////var_dump('não consultou');
             }
 
             if(!empty($data['cep'])){
@@ -87,7 +81,6 @@ class Valid extends Model
     
 
     protected static function consultCepBrasilApi($cep){
-        //var_dump('acessou consultCepBrasilApi');
         try {
             return json_decode(Http::get("https://brasilapi.com.br/api/cep/v2/{$cep}"), true);
         } catch (Exception $e) {
@@ -104,7 +97,6 @@ class Valid extends Model
         $code_uf = strtolower(valid::cleanString($order['shipping']['zone_code']??''));
 
         $code = self::consultIbgeMunicipioCodigoBrasilApi( $code_uf, $municipio);
-
         
         if(empty($code)){            
             if(!empty(valid::consultCepOwcep($postcode)['ibge'])){
@@ -143,8 +135,7 @@ class Valid extends Model
                             'nome' => strtolower(valid::cleanString($city_url['nome'])),
                             'codigo_ibge' => $city_url["codigo_ibge"]
                         ];
-                    }
-                    
+                    }                    
                 }
 
                 $duration = 60 * 60 * 24 * 7;
@@ -161,15 +152,11 @@ class Valid extends Model
 
     protected static function consultCepOwcep($postcode)
     {
-
-        //var_dump('acessou consultCepOwcep');
-
         return  Http::get("https://clubedamedalha.com.br/index.php?route=extension/module/ow_cep/getcep&cep={$postcode}");
     }
 
     protected static function consultCepViacep($postcode)
     {     
-        //var_dump('acessou consultCepViacep');
         return  Http::get("https://viacep.com.br/ws/{$postcode}/json/");
     }
 
