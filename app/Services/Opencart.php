@@ -109,7 +109,7 @@ class Opencart {
         $orders_valited = [];
 
         $i = 1;
-        $limit = 51;
+        $limit = 99;
 
         if (!empty($response['records'])) {            
 
@@ -118,6 +118,7 @@ class Opencart {
 
             foreach ($orders as $key => $order) {                               
 
+                //dd($order);
                 #var_dump('INICIOU: '.$order['order_id']);     
 
                 if(!empty($permited_orders) && !in_array($order['order_id'], $permited_orders)){
@@ -138,13 +139,13 @@ class Opencart {
                     $this->logValidateData('NÃO VALIDOU: '.$order['order_id']);
                 }
                 
-                $this->changeOrdersNotValited();
+               $this->changeOrdersNotValited();
                 //$this->error_validate_data = [];
 
             }
         }
-
-        return collect($orders_valited);
+        return $orders_valited;
+     //   return collect($orders_valited);
     }
 
     public function orderProductsMerge(array $order_products)
@@ -189,8 +190,9 @@ class Opencart {
     {
 
         $error = [];
-        if($order['order_status_id'] == Opencart::searchStatuses('new_order') 
-        || $order['order_status_id'] == Opencart::searchStatuses('after_dispatch_order') ){
+        if( !($order['order_status_id'] == Opencart::searchStatuses('new_order') 
+        || $order['order_status_id'] == Opencart::searchStatuses('reimport_new_order')
+        || $order['order_status_id'] == Opencart::searchStatuses('after_dispatch_order') )){
             return  true;
         }
 
@@ -804,17 +806,25 @@ class Opencart {
                 $comment .= "</p>";
             }
 
-            $this->logValidateData($comment);
-
-            self::orderHistory($order_id, [
-            
-                'order_status_id' => Opencart::updateStatuses('with_error_item_data'),
-                'comment' => $comment,
-                'notify' => false,
-    
-            ]);
+            self::sendChangeOrdersNotValited($order_id, $comment);
+           
         }
 
+    }
+    public function sendChangeOrdersNotValited($order_id, $comment)
+    {
+
+        $this->logValidateData($comment);
+
+        self::orderHistory($order_id, [
+        
+            'order_status_id' => Opencart::updateStatuses('with_error_item_data'),
+            'comment' => $comment,
+            'notify' => false,
+
+        ]);
+
+     
     }
     public function order(string|int $order_id)
     {
@@ -1112,11 +1122,11 @@ class Opencart {
             'params' => $params,
         ];
 
-        $stringfied_data = json_encode($log_data);
+        // $stringfied_data = json_encode($log_data);
 
-        $key = md5($stringfied_data . time());
+        // $key = md5($stringfied_data . time());
 
-        Storage::put("api-calls/opencart/{$key}.txt", $stringfied_data);
+        // Storage::put("api-calls/opencart/{$key}.txt", $stringfied_data);
     }
 
     private function basicAuth(): string

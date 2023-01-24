@@ -381,9 +381,25 @@ class Erp {
 
     public static function getMainPhone(array $order): string
     {
+        $telephone = valid::cleanNumber( Opencart::getCustomField($order['custom_fields'], Opencart::cellphone()))
+        ?? valid::cleanNumber( $order['telephone'] );
 
-         return valid::cleanNumber( Opencart::getCustomField($order['custom_fields'], Opencart::cellphone()))
-            ?? valid::cleanNumber( $order['telephone'] );
+        $ddd = substr($telephone, 0, 2);
+
+        $telefone = substr($telephone, 2, 99);;
+
+        if(in_array(substr($telefone, 0, 1), [9,8,7]) ){
+            $telefone = str_pad($telefone, 9, '9', STR_PAD_LEFT);
+        }
+
+        $telephone = $ddd.$telefone;
+
+        if(empty($telephone)){
+            $telephone = '21999999999';
+        }
+
+
+         return $telephone;
 
     }
 
@@ -419,7 +435,37 @@ class Erp {
 
     public static function prepareAddressStreet(array $order): string
     {
-        return   valid::cleanString($order['shipping']['address_1']);
+        $street = strtolower(valid::cleanString($order['shipping']['address_1']));
+
+        $replace = [
+            'avenida '      => 'av ',
+            'rua '          => ' ',
+            'praca '        => 'pc ',
+            'alameda '      => 'al ',
+            'santa '        => 'sta ',
+            'santo '        => 'sto ',
+            'quadra '       => 'qd ',
+            'lote '         => 'lt ',
+            'republica'     => 'rep',
+            'jardim'        => 'jd',
+            'prefeitura'    => 'pref',
+            'municipal'     => 'mun',
+            'loteamento'    => 'ltmto',
+            'universitario' => 'univ',
+            'restaurante'   => 'rest',
+            'maracanabom'   => 'mar',
+            'presidente'    => 'pr',
+            'governador'    => 'gov',
+            'desembargador' => 'des',
+            'monsenhor'     => 'mon'
+            'residencial'   => 'res'
+            'vila '          => 'v '
+            'centro '          => ' '
+        ];
+
+        $street = str_replace(array_keys($replace), array_values($replace), $street);
+
+        return   valid::cleanString($street);
     }
 
     public static function prepareAddress(array $order): string
@@ -433,12 +479,20 @@ class Erp {
         if(strlen($address_complement ) > 5){
             $street = str_replace($address_complement, '', $street);
         }
+
+        if(strlen($address_number ) > 2){
+            $street = str_replace($address_number, '', $street);
+        }
+        
         
         if(empty($address_number)){
             $address = "{$street}, 0 {$address_complement}";
         }else{
             $address = "{$street}, {$address_number} {$address_complement}";
         }
+
+        $street = str_replace('  ', ' ', $street);
+
 
         return trim($address);
 
@@ -480,13 +534,24 @@ class Erp {
 
     public static function prepareStateRegistration(array $order): string
     {
-        return valid::cleanNumber(Opencart::getCustomField($order['custom_fields'], Opencart::stateRegistration()));
+        return !empty(self::customerIsPj($order)) ? valid::cleanNumber(Opencart::getCustomField($order['custom_fields'], Opencart::stateRegistration())) : '';
     }
 
     public static function prepareCustomerType(array $order): string
     {
-        return !empty(Opencart::getCustomField($order['custom_fields'], Opencart::cnpj())) ? 'J' : 'F';
+        return !empty(self::customerIsPj($order)) ? 'J' : 'F';
     }
+
+    public static function customerIsPf(array $order): bool
+    {
+        return $order['customer_group_id'] == 2 ? false : true;
+    }
+
+    public static function customerIsPj(array $order): bool
+    {
+        return !self::customerIsPf($order);
+    }
+
 
     private function getCustomerData(array $order): array
     {       
@@ -695,7 +760,7 @@ class Erp {
 
             $tracking_number = $sexpOrder['numeroPostagem'];
             
-            return "{$tracking_number}(" . number_format($packageType["width"], 3, '.', '') . "x" . number_format($packageType["height"], 3, '.', '') . "x" . number_format($packageType["length"], 3, '.', '') . "x" . number_format($this->totalWeight($order, $packageType['weight']), 3, '.', '') . ")";
+            return "{$tracking_number} (" . number_format($packageType["width"], 2, '.', '') . " x " . number_format($packageType["height"], 2, '.', '') . " x " . number_format($packageType["length"], 2, '.', '') . ", " . number_format($this->totalWeight($order, $packageType['weight']), 3, '.', '') . ")";
 
         
     }
@@ -751,14 +816,19 @@ class Erp {
     {
 
         $custom_fields = $order['custom_fields']??[];
-
-        $document = !empty(Opencart::getCustomField($custom_fields, Opencart::cpf())) 
+        
+        $document = null;
+        if(self::customerIsPj($order)){
+            $document = !empty(self::customerIsPj($order)) 
+            ? Opencart::getCustomField($custom_fields, Opencart::cnpj()) 
+            : null;
+        }
+        
+        if(self::customerIsPf($order)){
+            $document = !empty(self::customerIsPf($order)) 
             ? Opencart::getCustomField($custom_fields, Opencart::cpf()) 
-            : (
-                !empty(Opencart::getCustomField($custom_fields, Opencart::cnpj()))
-                ? Opencart::getCustomField($custom_fields, Opencart::cnpj())
-                : null
-            );
+            : null;
+        }
 
         return valid::onlyNumbers($document);
     }

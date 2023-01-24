@@ -32,12 +32,16 @@ class SendOrdersToSexp extends Command
      */
     public function handle()
     {
-        #$orders = Opencart::orders(['filter_status' => Opencart::searchStatuses('with_error_item')]);
-        $orders = Opencart::orders(['filter_status' => Opencart::searchStatuses('new_order')]);
+        $orders = Opencart::orders(['filter_status' => Opencart::searchStatuses('reimport_new_order')]);
+
+        if(empty($orders)){            
+             $orders = Opencart::orders(['filter_status' => Opencart::searchStatuses('new_order')]);
+        }
 
         foreach ($orders as $order) {
             sleep(2);
 
+           // dd($order);
             $this->info('Enviado ao SEXP: '.$order['order_id']);
 
             try {
@@ -54,8 +58,13 @@ class SendOrdersToSexp extends Command
                     Sexp::createOrder($order);    
                    $this->updateOpencartOrderStatus($order['order_id']);
                 } catch (\Throwable $th) {
-                    var_dump('Erro na criação order: ').$order['order_id'];
-                    $this->error("{$order['order_id']} - Falhou: {$th->getMessage()}");
+                    $comment = 'Erro na criação order: ';
+                    $comment .= "{$order['order_id']} - Falhou: {$th->getMessage()}";
+                    var_dump($comment );
+
+                    Opencart::sendChangeOrdersNotValited($order['order_id'], $comment);
+
+                    $this->error($comment);
                 }
             }
         }

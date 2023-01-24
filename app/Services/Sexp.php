@@ -186,15 +186,15 @@ class Sexp {
 
         $key = Carbon::now()->format('YmdHis') . '-' . md5($stringfiedData . time());
 
-        $slugedUrl = Str::slug($url);
+        // $slugedUrl = Str::slug($url);
 
-        $path = "api-calls/sexp/{$key}.txt";
+        // $path = "api-calls/sexp/{$key}.txt";
 
-        if ($isCreatingOrder) {
-            $path = "api-calls/sexp/creating/{$key}.txt";
-        }
+        // if ($isCreatingOrder) {
+        //     $path = "api-calls/sexp/creating/{$key}.txt";
+        // }
 
-        Storage::put($path, $stringfiedData);
+        // Storage::put($path, $stringfiedData);
     }
 
     private function createXmlFromArray(array $params): string

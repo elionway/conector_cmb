@@ -5,7 +5,8 @@ return [
     'consumer_key' => env('OPENCART_CONSUMER_KEY', null),
     'consumer_secret' => env('OPENCART_CONSUMER_SECRET', null),
     'search_status' => [
-        'new_order'                   => 3,  //  1-Pagamento Aprovado >> 4-Enviado ao Sexp
+        'new_order'                   => 3,  //  1-Pagamento Aprovado >> 4-Enviado ao Sexp // 29-tratamento de dados
+        'reimport_new_order'          => 28, //  28-reimportar, validação de dados >> 4-Enviado ao Sexp
         'in_dispatchment_order'       => 4,  //  4-Enviado ao Sexp  >> 5-Recebido no cobre do SEXP
         'after_dispatch_order'        => 5,  //  5-Recebido no cobre do SEXP >> 6-Enviado a DMZ do ERP
         'invoiced_order'              => 6,  //  6-Enviado a DMZ do ERP >> 20-Aguardando Coleta            
@@ -21,11 +22,12 @@ return [
         'with_error_item_data'        => 25, // pedidos com erro na validação de dados
 
         'with_error_item_qt'          => 23, // Com erro de QUANTIDADE NA REsincronização de itens
-        'with_error_item_ok'          => 24,   
+        'with_error_item_ok'          => 24,
+        'error_send_to_sexp_without_nf' => 27 //Tentativa de enviar ao sexp, porem sem NF 
     ],
     'custom_fields' => [
         'cnpj' => ['CNPJ','2'],
-        'cpf' => ['CPF','1'],   
+        'cpf' => ['CPF','1'],
         'state_registration' => ['IE','4'],
         'address_number' => ['number','7'],
         'address_complement' => ['complement', '6'],
