@@ -457,10 +457,10 @@ class Erp {
             'presidente'    => 'pr',
             'governador'    => 'gov',
             'desembargador' => 'des',
-            'monsenhor'     => 'mon'
-            'residencial'   => 'res'
-            'vila '          => 'v '
-            'centro '          => ' '
+            'monsenhor'     => 'mon',
+            'residencial'   => 'res',
+            'vila '          => 'v ',
+            'centro '          => ' ',
         ];
 
         $street = str_replace(array_keys($replace), array_values($replace), $street);
@@ -504,7 +504,13 @@ class Erp {
         $firstname = $order['firstname']??'';
         $lastname = $order['lastname']??'';
 
-        return substr(valid::cleanString( $firstname. ' ' . $lastname), 0, 59);
+        if(!empty(self::customerIsPf($order))){
+            $fullname = $firstname. ' ' . $lastname;
+        }else{
+            $fullname = $firstname;
+        }
+       
+        return substr(valid::cleanString($fullname), 0, 59);
     }
 
     public static function prepareDistrict(array $order): string

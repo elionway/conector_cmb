@@ -1367,11 +1367,13 @@ class Valid extends Model
             '/Ç/'           =>   'C',
             '/ñ/'           =>   'n',
             '/Ñ/'           =>   'N',
-            '/–/'           =>   '-', // UTF-8 hyphen to "normal" hyphen
+            '/–/'           =>   '-', // UTF-8 hyphen to "normal" hyphen           
             '/[’‘‹›‚]/u'    =>   ' ', // Literally a single quote
             '/[“”«»„]/u'    =>   ' ', // Double quote
             '/ /'           =>   ' ', // nonbreaking space (equiv. to 0x160)
-            '/[^0-9A-Za-z\s]/'   =>   '',
+            '/[-_]/'             =>   ' ', //replace hyphen and underscore
+            '/[^0-9A-Za-z\s]/'   =>   '', //replace another special chars
+            
         );
         return trim(preg_replace(array_keys($utf8), array_values($utf8), $text));
     }
