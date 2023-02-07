@@ -5,7 +5,7 @@ return [
     'consumer_key' => env('OPENCART_CONSUMER_KEY', null),
     'consumer_secret' => env('OPENCART_CONSUMER_SECRET', null),
     'search_status' => [
-        'new_order'                   => 3,  //  1-Pagamento Aprovado >> 4-Enviado ao Sexp // 29-tratamento de dados
+        'new_order'                   => 3,  //  3-Pagamento Aprovado >> 4-Enviado ao Sexp // 29-tratamento de dados
         'reimport_new_order'          => 28, //  28-reimportar, validação de dados >> 4-Enviado ao Sexp
         'in_dispatchment_order'       => 4,  //  4-Enviado ao Sexp  >> 5-Recebido no cobre do SEXP
         'after_dispatch_order'        => 5,  //  5-Recebido no cobre do SEXP >> 6-Enviado a DMZ do ERP
