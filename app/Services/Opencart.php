@@ -422,11 +422,11 @@ class Opencart {
             $error['customer'][] = sprintf($this->text_max_char, 'CL_CXPOST', '10',  $customer['CL_CXPOST']);            
         }
 
-        if(empty($customer['CL_EMAIL'])){
+        if(empty($customer['CL_EMAIL']) |){
             $error['customer'][] = sprintf($this->text_not_blank, 'CL_EMAIL' );
         }
 
-        if(!empty($customer['CL_EMAIL']) && !filter_var($customer['CL_EMAIL'], FILTER_VALIDATE_EMAIL)){
+        if(!empty($customer['CL_EMAIL']) && (!filter_var($customer['CL_EMAIL'], FILTER_VALIDATE_EMAIL) || !valid::validateEmail($customer['CL_EMAIL']))){
             $error['customer'][] = "CL_EMAIL - Valor incorreto. E-mail inválido. Valor Obtido: \"{$customer['CL_EMAIL']}\"";       
         }
 
