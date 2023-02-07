@@ -69,7 +69,10 @@ class Erp {
 
     public function find(int $orderId): ?Faturado
     {
-        return Faturado::where('PEDIDO', str_pad($orderId, 9, "0", STR_PAD_LEFT))->first();
+        $return = Faturado::where('PEDIDO', str_pad($orderId, 9, "0", STR_PAD_LEFT))->first(); 
+        echo "FATURADO: ". $orderId;
+        var_dump($return);
+        return $return;
     }
 
     public function applicationCode(): string
@@ -394,10 +397,9 @@ class Erp {
 
         $telephone = $ddd.$telefone;
 
-        if(empty($telephone)){
-            $telephone = '21999999999';
-        }
-
+        // if(empty($telephone)){
+        //     $telephone = '21999999999';
+        // }
 
          return $telephone;
 
@@ -459,8 +461,13 @@ class Erp {
             'desembargador' => 'des',
             'monsenhor'     => 'mon',
             'residencial'   => 'res',
-            'vila '          => 'v ',
-            'centro '          => ' ',
+            'vila '         => 'v ',
+            'centro '       => ' ',
+            'condominio'    => 'cnd',
+            'bloco '        => 'bl ',
+            'apto '         => 'ap ',
+            'apartamento'   => 'ap',
+            'aptmt'         => 'ap',
         ];
 
         $street = str_replace(array_keys($replace), array_values($replace), $street);
