@@ -286,7 +286,7 @@ class Sexp {
 
     public static function logSendSexp(string $log)
     {
-        var_dump($log);
+        //var_dump($log);
 
         $log = date("Y-m-d h:i:sa")." - ".$log ;
         $log = $log . PHP_EOL;

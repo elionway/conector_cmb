@@ -422,7 +422,7 @@ class Opencart {
             $error['customer'][] = sprintf($this->text_max_char, 'CL_CXPOST', '10',  $customer['CL_CXPOST']);            
         }
 
-        if(empty($customer['CL_EMAIL']) |){
+        if(empty($customer['CL_EMAIL'])){
             $error['customer'][] = sprintf($this->text_not_blank, 'CL_EMAIL' );
         }
 

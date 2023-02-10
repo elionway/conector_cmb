@@ -67,11 +67,26 @@ class Erp {
         return !!$this->find($orderId);
     }
 
+    public function getOrder(int $orderId)
+    {
+
+        $items = Pedido
+                ::where('PV_NUMPED', '000'.$orderId)->get()
+                ;     
+
+        foreach($items as $item){
+            echo "PV_NUMPED: ".$item['PV_NUMPED']. ", PV_CODPR: ".$item['PV_CODPR']. ", PV_QTDPED: ".$item['PV_QTDPED']."
+            ";
+        }
+       
+       
+    }
+
     public function find(int $orderId): ?Faturado
     {
         $return = Faturado::where('PEDIDO', str_pad($orderId, 9, "0", STR_PAD_LEFT))->first(); 
-        echo "FATURADO: ". $orderId;
-        var_dump($return);
+        echo "FATURADO: ". $orderId." ";
+        //var_dump($return);
         return $return;
     }
 

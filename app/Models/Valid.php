@@ -1351,7 +1351,7 @@ class Valid extends Model
        return preg_replace('/[^0-9]/', '', $text);
     }
 
-    public function validateEmail($email)
+    public static function validateEmail($email)
     {
         $regex = '/^[_a-z0-9-]+(\.[_a-z0-9-]+)*@[a-z0-9-]+(\.[a-z0-9-]+)*(\.[a-z]{2,3})$/'; 
         return (preg_match($regex, $email))?true:false;       
