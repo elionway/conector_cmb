@@ -59,6 +59,8 @@ class Erp {
             #$this->createOrUpdateItemsForOnlyErrors($order['orders']);
             #$this->storeBillsForOnlyErrors($order['billing']);
 
+            //$this->deleteAndCreateOrderProducts($order['orders']);
+
          });
     }
 
@@ -85,7 +87,7 @@ class Erp {
     public function find(int $orderId): ?Faturado
     {
         $return = Faturado::where('PEDIDO', str_pad($orderId, 9, "0", STR_PAD_LEFT))->first(); 
-        echo "FATURADO: ". $orderId." ";
+        //var_dump( "FATURADO: ". $orderId." ");
         //var_dump($return);
         return $return;
     }
@@ -257,6 +259,24 @@ class Erp {
 
         }
     }
+
+    private function deleteAndCreateOrderProducts(array $order_products)
+    {     
+        
+        foreach ($order_products as $order_product) {                     
+            
+            $pedido = Pedido
+                ::where('PV_NUMPED', $order_product['PV_NUMPED'])
+                ->where('PV_CODPR', $order_product['PV_CODPR'])
+                ->delete();               
+
+            $text = "PEDIDO PRODUTO Deletado e Recriado: PED: ". $order_product['PV_NUMPED']. ", PROD: ". $order_product['PV_CODPR'] .", QNT: ".$order_product['PV_QTDPED'];
+
+            $this->logSendErp('CREATE '.$text);
+            Pedido::create($order_product);
+
+        }
+    }    
 
     private function createBills(array $bills)
     {
@@ -456,7 +476,7 @@ class Erp {
 
         $replace = [
             'avenida '      => 'av ',
-            'rua '          => ' ',
+            //'rua '          => ' ',
             'praca '        => 'pc ',
             'alameda '      => 'al ',
             'santa '        => 'sta ',
@@ -477,8 +497,9 @@ class Erp {
             'monsenhor'     => 'mon',
             'residencial'   => 'res',
             'vila '         => 'v ',
-            'centro '       => ' ',
+            //'centro '       => ' ',
             'condominio'    => 'cnd',
+            'casa '         => 'cs ',
             'bloco '        => 'bl ',
             'apto '         => 'ap ',
             'apartamento'   => 'ap',
