@@ -300,9 +300,9 @@ class Opencart {
             } 
         }
 
-        if(!empty($customer['CL_IEST']) && !valid::inscricao_estadual($customer['CL_IEST'], $customer['CL_UF'])){
-            $error['customer'][] = "CL_IEST - Valor incorreto. Iscrição estadual inválida. Valor Obtido:: CL_IEST: \"{$customer['CL_IEST']}\", CL_UF: \"{$customer['CL_UF']}\"";
-        } 
+        // if(!empty($customer['CL_IEST']) && !valid::inscricao_estadual($customer['CL_IEST'], $customer['CL_UF'])){
+        //     $error['customer'][] = "CL_IEST - Valor incorreto. Iscrição estadual inválida. Valor Obtido:: CL_IEST: \"{$customer['CL_IEST']}\", CL_UF: \"{$customer['CL_UF']}\"";
+        // } 
 
         if(empty($customer['CL_END'])){
             $error['customer'][] = sprintf($this->text_not_blank, 'CL_END' );
