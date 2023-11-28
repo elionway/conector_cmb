@@ -776,7 +776,7 @@ class Erp {
             'PV_TPCONV'  => '',
             'PV_CODMSG'  => $product['cest'] == 3 ? '012' : '',
             'PV_QTDVOL'  => 1,
-            'PV_TRANSP'  => '000062', //pontual
+            'PV_TRANSP'  => '000258', //000258 RMCARGAS //'000062' pontual
             'PV_AR'      => $this->messageAr($order, $product),
             'PV_MEIOPG'  => $paymentData['paymentMethod'],
             'PV_CODCPG'  => $paymentData['paymentCode'],
