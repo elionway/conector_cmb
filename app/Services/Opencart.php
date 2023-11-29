@@ -589,8 +589,9 @@ class Opencart {
                 $error['products'][$key][] = sprintf($this->text_not_blank, 'PV_TRANSP' );
             }
 
-            if(!empty($order_product['PV_TRANSP']) && !($order_product['PV_TRANSP'] === "000062")){
-                $error['products'][$key][] = "PV_TRANSP - Valor incorreto. Valor permitido é \"000062\". Valor Obtido: \"{$order_product['PV_TRANSP']}\"";
+            $cod_trans = '000258'; //000258 RMCARGAS //'000062' pontual
+            if(!empty($order_product['PV_TRANSP']) && !($order_product['PV_TRANSP'] === $cod_trans)){
+                $error['products'][$key][] = "PV_TRANSP - Valor incorreto. Valor permitido é \"{$cod_trans}\". Valor Obtido: \"{$order_product['PV_TRANSP']}\"";
             }
 
             //TODO: refatorar PV_TES com mais validações
