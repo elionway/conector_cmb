@@ -40,7 +40,15 @@ class Sexp {
         $order = $this->getOrder($order_id);
         
        # dd($order);
+       if (exist($order['status']['codigo'])){
         return $order['status']['codigo'] == '3';
+       }else{
+        Opencart::orderHistory($order_id, [
+            'order_status_id' => Opencart::updateStatuses('dispatched_order'),
+            'comment' => $order,
+            'notify' => false,
+        ]);
+       }        
     }
 
     public function getOrder(int $order_id): array
