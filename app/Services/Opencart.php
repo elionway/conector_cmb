@@ -944,7 +944,7 @@ class Opencart {
             0 => [
                 'order_id' => $order_id,
                 'order_status_id' => $data['order_status_id'],
-                'comment' => $data['comment'],
+                'comment' => "ERRO: ".print_r($data['comment'], true),
                 'notify' => $data['notify'],
             ],
         ];
