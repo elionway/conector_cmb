@@ -71,7 +71,7 @@ class UpdateOrderShipment extends Command
                 if ($sexpOrder['status']['codigo'] == '5') {
                     $this->updateOpencartOrderStatus($order_id, $invoiced['NOTA'], $sexpOrder['numeroPostagem']);
                 }else{
-                    var_dump('Não Enviou: '.$order_id);
+                    var_dump('Não Enviou: '.$order_id. ' STATUS: '.$sexpOrder['status']['codigo']);
                 }
             }
             // else{               
