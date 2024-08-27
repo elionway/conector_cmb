@@ -37,18 +37,27 @@ class Sexp {
 
     public function orderHasTrackingNumber(int $order_id): bool
     {
-        $order = $this->getOrder($order_id);
-        
-       # dd($order);
-       if (!empty($order['status']['codigo'])){
-        return $order['status']['codigo'] == '3';
-       }else{
-        Opencart::orderHistory($order_id, [
-            'order_status_id' => Opencart::updateStatuses('with_error_item_data'),
-            'comment' => $order,
-            'notify' => false,
-        ]);
-       }        
+
+        try {
+            $order = $this->getOrder($order_id);
+
+            $this->logDebug("order: ".print_r($order, true));
+
+            if (!empty($order['status']['codigo'])){
+                return $order['status']['codigo'] == '3';
+            }else{
+    
+                Opencart::orderHistory($order_id, [
+                    'order_status_id' => Opencart::updateStatuses('with_error_item_data'),
+                    'comment' => $order,
+                    'notify' => false,
+                ]);
+            }      
+
+        } catch (\Throwable $th) {
+            return false;
+        }
+         
     }
 
     public function getOrder(int $order_id): array
@@ -109,7 +118,7 @@ class Sexp {
 
     private function renderOrderFromRequest(array $response): array
     {
-        //return [];
+
         return $response['soap:Envelope']['soap:Body']['ns2:consultarRemessaResponse']['informacoesRemessa'];
     }
 
@@ -175,7 +184,6 @@ class Sexp {
 
         $this->log($url, $request, $params, $this->isCreatingOrder($params));
 
-        throw_if($request->failed(), new Exception($request->body()));
 
         $response = $request->body();
 
@@ -300,6 +308,15 @@ class Sexp {
         $log = $log . PHP_EOL;
         File::append(
             storage_path('/logs/send_sexp.log'), $log
+       );
+    }
+    public static function logDebug(string $log)
+    {
+
+        $log = date("Y-m-d h:i:sa")." - ".$log ;
+        $log = $log . PHP_EOL;
+        File::append(
+            storage_path('/logs/logDebug.log'), $log
        );
     }
 
