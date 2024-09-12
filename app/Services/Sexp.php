@@ -38,15 +38,15 @@ class Sexp {
     public function orderHasTrackingNumber(int $order_id): bool
     {
 
+        
         try {
             $order = $this->getOrder($order_id);
-
+            
             $this->logDebug("order: ".print_r($order, true));
 
             if (!empty($order['status']['codigo'])){
                 return $order['status']['codigo'] == '3';
-            }else{
-    
+            }elseif (!empty($order['error'])){
                 Opencart::orderHistory($order_id, [
                     'order_status_id' => Opencart::updateStatuses('with_error_item_data'),
                     'comment' => $order,
@@ -62,6 +62,8 @@ class Sexp {
 
     public function getOrder(int $order_id): array
     {
+
+
         $params = [
             'chaveUnica' => 'ECMB' . str_pad($order_id, 9, '0', STR_PAD_LEFT),
             'codigoProduto' => '803479',
@@ -69,6 +71,7 @@ class Sexp {
 
         $params = $this->parseSearchOrderParams($params);
 
+        //dd($params);
         $order = $this->execute($params);
        
         $response = $this->renderOrderFromRequest($order);
@@ -118,8 +121,19 @@ class Sexp {
 
     private function renderOrderFromRequest(array $response): array
     {
+       // dd($response);
+        
+        if(!empty($response['soap:Envelope']['soap:Body']['ns2:consultarRemessaResponse']['informacoesRemessa'])){
+            return $response['soap:Envelope']['soap:Body']['ns2:consultarRemessaResponse']['informacoesRemessa'];
+        }
 
-        return $response['soap:Envelope']['soap:Body']['ns2:consultarRemessaResponse']['informacoesRemessa'];
+       // return $response['soap:Envelope']['soap:Body']['ns2:consultarRemessaResponse']['informacoesRemessa'];
+
+        if(!empty($response['soap:Envelope']['soap:Fault']['faultstring'])){
+            return ['error' => $response['soap:Envelope']['soap:Body']['ns2:consultarRemessaResponse']['informacoesRemessa']];
+        }
+
+        return ['error'=>$response];
     }
 
     public function addressSettings(): array

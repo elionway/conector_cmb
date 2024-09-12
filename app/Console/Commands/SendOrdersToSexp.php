@@ -45,18 +45,28 @@ class SendOrdersToSexp extends Command
             $this->info('Enviado ao SEXP: '.$order['order_id']);
 
             try {
-                var_dump('Encontrou order, vai altear o status '.$order['order_id']);
-                Sexp::getOrder($order['order_id']);
+                
+                $sexp_order = Sexp::getOrder($order['order_id']);
 
-                $this->updateOpencartOrderStatus($order['order_id']);
+                if(!empty($sexp_order['error'])
+                    && !empty($sexp_order['error']['soap:Envelope']['soap:Body']['soap:Fault']['faultstring'])
+                    && $sexp_order['error']['soap:Envelope']['soap:Body']['soap:Fault']['faultstring'] == "Remessa năo encontrada."){
 
-                $this->info("{$order['order_id']} - O pedido já existe no SEXP");
-            } catch (\Throwable $th) {
+                        $this->createSexpOrder($order);
+                }else{
+                    var_dump('Encontrou order, vai altear o status '.$order['order_id']);
+
+                    $this->updateOpencartOrderStatus($order['order_id']);
+
+                    $this->info("{$order['order_id']} - O pedido já existe no SEXP");
+                }
+             } catch (\Throwable $th) {
                 
                 try {
-                    var_dump('Criou order: ').$order['order_id'];
-                    Sexp::createOrder($order);    
-                   $this->updateOpencartOrderStatus($order['order_id']);
+                //     var_dump('Criou order: ').$order['order_id'];
+                //     Sexp::createOrder($order);    
+                //    $this->updateOpencartOrderStatus($order['order_id']);
+                    $this->createSexpOrder($order);
                 } catch (\Throwable $th) {
                     $comment = 'Erro na criação order: ';
                     $comment .= "{$order['order_id']} - Falhou: {$th->getMessage()}";
@@ -68,6 +78,13 @@ class SendOrdersToSexp extends Command
                 }
             }
         }
+    }
+
+    private function createSexpOrder(array $order)
+    {
+        var_dump('Criou order: ').$order['order_id'];
+        Sexp::createOrder($order);    
+        $this->updateOpencartOrderStatus($order['order_id']);
     }
 
     private function updateOpencartOrderStatus(int $order_id)
