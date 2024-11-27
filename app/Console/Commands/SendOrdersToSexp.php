@@ -38,6 +38,10 @@ class SendOrdersToSexp extends Command
              $orders = Opencart::orders(['filter_status' => Opencart::searchStatuses('new_order')]);
         }
 
+        if(empty($orders)){            
+             $orders = Opencart::orders(['filter_status' => Opencart::searchStatuses('in_dispatchment_order')]);
+        }
+
         foreach ($orders as $order) {
             sleep(2);
 
@@ -54,11 +58,20 @@ class SendOrdersToSexp extends Command
 
                         $this->createSexpOrder($order);
                 }else{
-                    var_dump('Encontrou order, vai altear o status '.$order['order_id']);
+                    var_dump('---');
+                    $this->info('Encontrou order, vai altear o status '.$order['order_id']);
+                    // dd($order);
 
+                    if($order['order_status_id'] == Opencart::searchStatuses('in_dispatchment_order')){
+                        var_dump('Mesmo Status não alterou');
+                        // return;
+                   }
+                   else{
                     $this->updateOpencartOrderStatus($order['order_id']);
-
-                    $this->info("{$order['order_id']} - O pedido já existe no SEXP");
+                    
+                    var_dump("{$order['order_id']} - O pedido já existe no SEXP Status Alterado");
+                   }
+                    
                 }
              } catch (\Throwable $th) {
                 
@@ -84,6 +97,12 @@ class SendOrdersToSexp extends Command
     {
         var_dump('Criou order: ').$order['order_id'];
         Sexp::createOrder($order);    
+        
+        if($order['order_status_id'] == Opencart::searchStatuses('in_dispatchment_order')){
+             var_dump('Mesmo Status não alterou');
+             return;
+        }
+
         $this->updateOpencartOrderStatus($order['order_id']);
     }
 
