@@ -1059,11 +1059,22 @@ class Opencart {
 
     private function accessToken()
     {
-        $response = Http::withHeaders($this->headers())->post($this->action('access_token'));
+        try {
+            $response = Http::timeout(15)->withHeaders($this->headers())->post($this->action('access_token'));
+        } catch (\Illuminate\Http\Client\ConnectionException $e) {
+            throw new \RuntimeException('Falha de conexão na autenticação da API CMB.');
+        }
 
-        $this->validate($response);
+        if (!$response->successful()) {
+            throw new \RuntimeException('Falha na autenticação da API CMB: HTTP ' . $response->status() . '.');
+        }
 
-        $this->access_token = $response->object()->access_token;
+        $data = $response->json();
+        $token = is_array($data) ? ($data['access_token'] ?? null) : null;
+        if (!is_string($token) || trim($token) === '') {
+            throw new \RuntimeException('Resposta inválida na autenticação da API CMB: token ausente ou inválido.');
+        }
+        $this->access_token = $token;
     }
 
     private function validate(Response $response)

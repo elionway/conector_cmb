@@ -28,58 +28,31 @@ class Valid extends Model
     }
     protected static function consultCep($cep)
     {
-       
-        $postcode = self::onlyNumbers($cep);
-        $data = Cache::get($postcode);
-        $consult = [];
-
-        //var_dump($data);
-
-       // dd($data);
-        if(!empty($postcode) && empty($data['cep'])){  
-            
-          #  if(!empty(self::consultCepBrasilApi($postcode)['cep'])){
-          #      $consult = self::consultCepBrasilApi($postcode);
-          #      $data = [
-          #          "cep"        => self::onlyNumbers($consult['cep']??''),
-          #          "logradouro" => self::cleanString($consult['street']??''),
-          #          "bairro"     => self::cleanString($consult['neighborhood']??''),
-          #          "cidade"     => self::cleanString($consult['city']??''),
-          #          'uf'         => self::cleanString($consult['state']??''),                   
-          #      ];
-          #  }elseif(!empty(self::consultCepOwcep($postcode)['cep'])){
-          #      $consult = self::consultCepOwcep($postcode);
-          #      $data = [
-          #          "cep"        => self::onlyNumbers($consult['cep']??''),
-          #          "logradouro" => self::cleanString($consult['logradouro']??''),
-          #          "bairro"     => self::cleanString($consult['bairro']??''),
-          #          "cidade"     => self::cleanString($consult['cidade']??''),
-          #          'uf'         => self::cleanString($consult['uf']??''),
-          #      ];
-          #  }else
-if(!empty(self::consultCepViacep($postcode)['cep'])){
-                $consult = self::consultCepViacep($postcode);
-                $data = [
-                    "cep"        => self::onlyNumbers($consult['cep']??''),
-                    "logradouro" => self::cleanString($consult['logradouro']??''),
-                    "bairro"     => self::cleanString($consult['bairro']??''),
-                    "cidade"     => self::cleanString($consult['cidade']??''),
-                    'uf'         => self::cleanString($consult['uf']??''),
-                ];
-            }
-
-            if(!empty($data['cep'])){
-                $duration = 60 * 60 * 24 * 7;
-                Cache::set($postcode, $data, $duration);
-            }else{
-                Cache::forget($postcode);
-            }
-            
+        $postcode = self::onlyNumbers((string) $cep);
+        if (strlen($postcode) !== 8) {
+            throw new \RuntimeException('CEP inválido para consulta no CMB.');
         }
 
-        return $data ;
+        // Separate from legacy cache entries that do not contain IBGE.
+        $key = 'cmb:cep:' . $postcode;
+        $cached = Cache::get($key);
+        if (is_array($cached) && ($cached['cep'] ?? null) === $postcode
+            && preg_match('/^[0-9]{7}$/D', (string) ($cached['ibge'] ?? ''))) {
+            return $cached;
+        }
+
+        $response = self::consultCepOwcep($postcode);
+        $data = [
+            'cep' => $postcode,
+            'logradouro' => self::cleanString($response['logradouro'] ?? ''),
+            'bairro' => self::cleanString($response['bairro'] ?? ''),
+            'cidade' => self::cleanString($response['localidade'] ?? $response['cidade']),
+            'uf' => strtoupper($response['uf']),
+            'ibge' => (string) $response['ibge'],
+        ];
+        Cache::set($key, $data, 60 * 60 * 24 * 7);
+        return $data;
     }
-    
 
     protected static function consultCepBrasilApi($cep){
         try {
@@ -90,24 +63,11 @@ if(!empty(self::consultCepViacep($postcode)['cep'])){
         
     }
 
-   protected static function getIbgeCodigoMunicipioByOrderInfo($order)
+    protected static function getIbgeCodigoMunicipioByOrderInfo($order)
     {
-
-        $postcode = $order['shipping']['postcode']??'';
-        $municipio = strtolower(valid::cleanString($order['shipping']['city']??''));
-        $code_uf = strtolower(valid::cleanString($order['shipping']['zone_code']??''));
-
-        $code = self::consultIbgeMunicipioCodigoBrasilApi( $code_uf, $municipio);
-        
-        if(empty($code)){            
-            if(!empty(valid::consultCepOwcep($postcode)['ibge'])){
-                $code =valid::consultCepOwcep($postcode)['ibge'];
-            }elseif(!empty(valid::consultCepViacep(($postcode)['ibge']))){
-                $code =valid::consultCepViacep($postcode['ibge']);
-            }
-        }
-
-        return substr($code??'', -5) ;
+        $data = self::consultCep($order['shipping']['postcode'] ?? '');
+        // Preserve the existing ERP contract: municipality without the UF prefix.
+        return substr($data['ibge'], -5);
     }
 
     protected static  function consultIbgeMunicipioCodigoBrasilApi($siglaUF, $city_parm){
@@ -120,40 +80,87 @@ if(!empty(self::consultCepViacep($postcode)['cep'])){
     }
 
     protected static function getCitiesFromBrasilApiByUF($siglaUF){
+        $siglaUF = strtoupper(trim((string) $siglaUF));
+        if (!preg_match('/^[A-Z]{2}$/D', $siglaUF)) {
+            throw new \RuntimeException('UF inválida para consulta de municípios.');
+        }
 
         $cities = Cache::get($siglaUF);
-
-        if(empty($cities)){
-
-            try {
-                $cities_url = json_decode(Http::get("https://brasilapi.com.br/api/ibge/municipios/v1/{$siglaUF}?providers=dados-abertos-br,gov,wikipedia"), true);;
-            
-                $cities = [];
-                foreach($cities_url as $city_url){
-                    if(!empty($city_url['nome']) && !empty($city_url["codigo_ibge"])){
-                        $city = strtolower(valid::cleanString($city_url['nome']));
-                        $cities[$city]  = [
-                            'nome' => strtolower(valid::cleanString($city_url['nome'])),
-                            'codigo_ibge' => $city_url["codigo_ibge"]
-                        ];
-                    }                    
-                }
-
-                $duration = 60 * 60 * 24 * 7;
-                Cache::set($siglaUF, $cities, $duration);
-            } catch (Exception $e) {
-               return [];
-            }
-
+        if (is_array($cities) && !empty($cities)) {
+            return $cities;
         }
-       
+
+        try {
+            $response = Http::timeout(15)->get("https://brasilapi.com.br/api/ibge/municipios/v1/{$siglaUF}?providers=dados-abertos-br,gov,wikipedia");
+        } catch (\Illuminate\Http\Client\ConnectionException $e) {
+            throw new \RuntimeException('Falha de conexão na consulta de municípios.');
+        }
+
+        if (!$response->successful()) {
+            throw new \RuntimeException('Falha na consulta de municípios: HTTP ' . $response->status() . '.');
+        }
+
+        $rows = $response->json();
+        if (!is_array($rows) || array_values($rows) !== $rows || empty($rows)) {
+            throw new \RuntimeException('Resposta inválida na consulta de municípios.');
+        }
+
+        $cities = [];
+        foreach ($rows as $row) {
+            if (!is_array($row) || !isset($row['nome'], $row['codigo_ibge'])
+                || !is_string($row['nome']) || trim($row['nome']) === ''
+                || !(is_string($row['codigo_ibge']) || is_int($row['codigo_ibge']))
+                || !preg_match('/^[0-9]{7}$/D', (string) $row['codigo_ibge'])) {
+                throw new \RuntimeException('Resposta inválida na consulta de municípios.');
+            }
+            $city = strtolower(valid::cleanString($row['nome']));
+            $cities[$city] = ['nome' => $city, 'codigo_ibge' => $row['codigo_ibge']];
+        }
+
+        Cache::set($siglaUF, $cities, 60 * 60 * 24 * 7);
         return $cities;
     }
 
 
     protected static function consultCepOwcep($postcode)
     {
-        return  Http::get("https://clubedamedalha.com.br/index.php?route=extension/module/ow_cep/getcep&cep={$postcode}");
+        $postcode = self::onlyNumbers((string) $postcode);
+        if (strlen($postcode) !== 8) {
+            throw new \RuntimeException('CEP inválido para consulta no CMB.');
+        }
+        try {
+            $response = Http::timeout(15)->get('https://clubedamedalha.com.br/index.php', [
+                'route' => 'extension/module/ow_cep/getcep',
+                'cep' => $postcode,
+            ]);
+        } catch (\Illuminate\Http\Client\ConnectionException $e) {
+            throw new \RuntimeException('Falha de conexão na consulta de CEP do CMB.');
+        }
+        if (!$response->successful()) {
+            throw new \RuntimeException('Falha na consulta de CEP do CMB: HTTP ' . $response->status() . '.');
+        }
+        $data = $response->json();
+        if (!is_array($data) || array_values($data) === $data) {
+            throw new \RuntimeException('Resposta inválida na consulta de CEP do CMB.');
+        }
+        if (!empty($data['erro']) || !empty($data['error'])) {
+            throw new \RuntimeException('CEP não encontrado na consulta do CMB.');
+        }
+        $city = $data['localidade'] ?? $data['cidade'] ?? null;
+        if (!isset($data['cep'], $data['uf'], $data['ibge'])
+            || !is_string($data['cep']) || self::onlyNumbers($data['cep']) !== $postcode
+            || !is_string($city) || trim($city) === ''
+            || !is_string($data['uf']) || !preg_match('/^[A-Za-z]{2}$/D', $data['uf'])
+            || !(is_string($data['ibge']) || is_int($data['ibge']))
+            || !preg_match('/^[0-9]{7}$/D', (string) $data['ibge'])) {
+            throw new \RuntimeException('Resposta inválida na consulta de CEP do CMB.');
+        }
+        foreach (['logradouro', 'bairro'] as $field) {
+            if (isset($data[$field]) && !is_string($data[$field])) {
+                throw new \RuntimeException('Resposta inválida na consulta de CEP do CMB.');
+            }
+        }
+        return $data;
     }
 
     protected static function consultCepViacep($postcode)
