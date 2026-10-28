@@ -76,6 +76,7 @@ class SendOrdersToSexp extends Command
                     
                 }
              } catch (\Throwable $th) {
+                \App\Services\ConnectorAlertReporter::reportSafely($th, 'sexp');
                 
                 try {
                 //     var_dump('Criou order: ').$order['order_id'];
@@ -83,6 +84,7 @@ class SendOrdersToSexp extends Command
                 //    $this->updateOpencartOrderStatus($order['order_id']);
                     $this->createSexpOrder($order);
                 } catch (\Throwable $th) {
+                \App\Services\ConnectorAlertReporter::reportSafely($th, 'sexp');
                     $comment = 'Erro na criação order: ';
                     $comment .= "{$order['order_id']} - Falhou: {$th->getMessage()}";
                     var_dump($comment );

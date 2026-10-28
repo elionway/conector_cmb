@@ -66,6 +66,7 @@ class Sexp {
             }      
 
         } catch (\Throwable $th) {
+                \App\Services\ConnectorAlertReporter::reportSafely($th, 'sexp');
             return false;
         }
          
@@ -100,6 +101,7 @@ class Sexp {
             $this->execute($params);
             self::logSendSexp('UPDATE: '.$order_id);
         }catch (\Throwable $th) {
+                \App\Services\ConnectorAlertReporter::reportSafely($th, 'sexp');
             self::logSendSexp('FALHA NO UPDATE: '.$order_id);
         }        
     }

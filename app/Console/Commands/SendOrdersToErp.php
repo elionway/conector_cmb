@@ -54,6 +54,7 @@ class SendOrdersToErp extends Command
                 $this->updateOpencartOrderStatus($order['order_id']);
 
             } catch (\Throwable $th) {
+                \App\Services\ConnectorAlertReporter::reportSafely($th, 'erp');
 
                 $this->info('Ocorreu um erro: '.$order['order_id']); 
                 $error = "{$th->getMessage()} - {$th->getFile()}:{$th->getLine()}";
