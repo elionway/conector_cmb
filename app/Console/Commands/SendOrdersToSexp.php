@@ -51,10 +51,12 @@ class SendOrdersToSexp extends Command
             try {
                 
                 $sexp_order = Sexp::getOrder($order['order_id']);
+                //dd($sexp_order);
 
                 if(!empty($sexp_order['error'])
                     && !empty($sexp_order['error']['soap:Envelope']['soap:Body']['soap:Fault']['faultstring'])
-                    && $sexp_order['error']['soap:Envelope']['soap:Body']['soap:Fault']['faultstring'] == "Remessa năo encontrada."){
+                    && ($sexp_order['error']['soap:Envelope']['soap:Body']['soap:Fault']['faultstring'] == "Remessa nĂ£o encontrada."
+                    OR $sexp_order['error']['soap:Envelope']['soap:Body']['soap:Fault']['faultstring'] == "Remessa nĂ£o encontrada.")){
 
                         $this->createSexpOrder($order);
                 }else{

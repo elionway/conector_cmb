@@ -44,9 +44,20 @@ class Sexp {
             
             $this->logDebug("order: ".print_r($order, true));
 
+            
             if (!empty($order['status']['codigo'])){
-                return $order['status']['codigo'] == '3';
+               
+                if($order['status']['codigo'] == '3' || $order['status']['codigo'] == '5'){
+                  //  dd($order['status']);
+                  //var_dump("IF order['status']['codigo']".$order['status']['codigo']);
+                    return  true;
+                } 
+              //  dd($order);
+             // var_dump("ELSE order['status']['codigo']".$order['status']['codigo']);
+                return false;
+                
             }elseif (!empty($order['error'])){
+            //    dd($order['error']);
                 Opencart::orderHistory($order_id, [
                     'order_status_id' => Opencart::updateStatuses('with_error_item_data'),
                     'comment' => $order,

@@ -1068,6 +1068,7 @@ class Opencart {
 
     private function validate(Response $response)
     {
+      // dd($response->serverError());
         if ($response->serverError()) {
             throw new \Exception($this->errorMessage($response));
         }

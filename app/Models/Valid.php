@@ -38,25 +38,26 @@ class Valid extends Model
        // dd($data);
         if(!empty($postcode) && empty($data['cep'])){  
             
-            if(!empty(self::consultCepBrasilApi($postcode)['cep'])){
-                $consult = self::consultCepBrasilApi($postcode);
-                $data = [
-                    "cep"        => self::onlyNumbers($consult['cep']??''),
-                    "logradouro" => self::cleanString($consult['street']??''),
-                    "bairro"     => self::cleanString($consult['neighborhood']??''),
-                    "cidade"     => self::cleanString($consult['city']??''),
-                    'uf'         => self::cleanString($consult['state']??''),                   
-                ];
-            }elseif(!empty(self::consultCepOwcep($postcode)['cep'])){
-                $consult = self::consultCepOwcep($postcode);
-                $data = [
-                    "cep"        => self::onlyNumbers($consult['cep']??''),
-                    "logradouro" => self::cleanString($consult['logradouro']??''),
-                    "bairro"     => self::cleanString($consult['bairro']??''),
-                    "cidade"     => self::cleanString($consult['cidade']??''),
-                    'uf'         => self::cleanString($consult['uf']??''),
-                ];
-            }elseif(!empty(self::consultCepViacep($postcode)['cep'])){
+          #  if(!empty(self::consultCepBrasilApi($postcode)['cep'])){
+          #      $consult = self::consultCepBrasilApi($postcode);
+          #      $data = [
+          #          "cep"        => self::onlyNumbers($consult['cep']??''),
+          #          "logradouro" => self::cleanString($consult['street']??''),
+          #          "bairro"     => self::cleanString($consult['neighborhood']??''),
+          #          "cidade"     => self::cleanString($consult['city']??''),
+          #          'uf'         => self::cleanString($consult['state']??''),                   
+          #      ];
+          #  }elseif(!empty(self::consultCepOwcep($postcode)['cep'])){
+          #      $consult = self::consultCepOwcep($postcode);
+          #      $data = [
+          #          "cep"        => self::onlyNumbers($consult['cep']??''),
+          #          "logradouro" => self::cleanString($consult['logradouro']??''),
+          #          "bairro"     => self::cleanString($consult['bairro']??''),
+          #          "cidade"     => self::cleanString($consult['cidade']??''),
+          #          'uf'         => self::cleanString($consult['uf']??''),
+          #      ];
+          #  }else
+if(!empty(self::consultCepViacep($postcode)['cep'])){
                 $consult = self::consultCepViacep($postcode);
                 $data = [
                     "cep"        => self::onlyNumbers($consult['cep']??''),

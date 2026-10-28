@@ -37,13 +37,16 @@ class UpdateOrderTracking extends Command
         foreach ($orders as $order) {
             
             $this->info('Iniciado Processo de consulta no Cofre do SEXP: '.$order['order_id']);
-
+              var_dump('before if');
             if (Sexp::orderHasTrackingNumber($order['order_id'])) {
+                var_dump('if');
                 $this->info('Encontrou: '.$order['order_id']);
                 $this->updateOpencartOrderStatus($order['order_id']);
             }else{
+                 var_dump('else');
                 $this->info('NÃO Encontrou: '.$order['order_id']);
             }
+            var_dump('after if');
 
         }
     }
