@@ -20,6 +20,7 @@ class ConnectorAlertReporter
     public static function reportSafely(Throwable $error, string $category = 'runtime'): void
     {
         try {
+            app(ConnectorAudit::class)->record('execution.error_caught', ['error'=>true]);
             if (app()->bound(self::class)) {
                 app(self::class)->report($error, $category);
             }

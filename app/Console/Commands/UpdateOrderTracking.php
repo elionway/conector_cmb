@@ -16,7 +16,7 @@ class UpdateOrderTracking extends Command
      *
      * @var string
      */
-    protected $signature = 'orders:update:tracking';
+    protected $signature = 'orders:update:tracking {--audit-manual : Explicit manual execution during audit mode}';
 
     /**
      * The console command description.
@@ -32,6 +32,10 @@ class UpdateOrderTracking extends Command
      */
     public function handle()
     {
+        if (!app(\App\Services\ConnectorAudit::class)->begin('orders:update:tracking', (bool)$this->option('audit-manual'))) {
+            $this->error('Auditoria ativa: execute manualmente com --audit-manual.');
+            return 1;
+        }
         $orders = Opencart::orders(['filter_status' => Opencart::searchStatuses('in_dispatchment_order')]);
 
         foreach ($orders as $order) {

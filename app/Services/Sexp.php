@@ -42,7 +42,9 @@ class Sexp {
         try {
             $order = $this->getOrder($order_id);
             
-            $this->logDebug("order: ".print_r($order, true));
+            if (!app(ConnectorAudit::class)->enabled()) {
+                $this->logDebug("order: ".print_r($order, true));
+            }
 
             
             if (!empty($order['status']['codigo'])){
@@ -87,6 +89,10 @@ class Sexp {
         $order = $this->execute($params);
        
         $response = $this->renderOrderFromRequest($order);
+        app(ConnectorAudit::class)->record('sexp.status_received', [
+            'order_id'=>$order_id, 'status_code'=>$response['status']['codigo'] ?? null,
+            'error'=>!empty($response['error']), 'tracking_present'=>!empty($response['numeroPostagem']),
+        ]);
         //dd($response);
         return $response;
     }
@@ -197,6 +203,17 @@ class Sexp {
 
     private function execute(array $params)
     {
+        $body = $params['soapenv:Envelope']['soapenv:Body'] ?? [];
+        $action = array_key_first($body);
+        $steps = ['ws:consultarRemessa'=>'sexp.query', 'ws:incluirRemessa'=>'sexp.create', 'ws:informarNF'=>'sexp.invoice'];
+        $step = $steps[$action] ?? 'sexp.unknown';
+        $key = $body[$action]['chaveUnica'] ?? $body[$action]['remessa']['chaveUnica'] ?? '';
+        $fields = preg_match('/^ECMB([0-9]{9})$/D', $key, $match) ? ['order_id'=>(int)$match[1]] : [];
+        return app(ConnectorAudit::class)->operation($step, fn () => $this->executeTransport($params), $fields);
+    }
+
+    private function executeTransport(array $params)
+    {
         //return  [];
         $params = $this->createXmlFromArray($params);
 
@@ -212,6 +229,7 @@ class Sexp {
         $this->log($url, $request, $params, $this->isCreatingOrder($params));
 
 
+        app(ConnectorAudit::class)->record('sexp.http_received', ['http_status'=>$request->status()]);
         $response = $request->body();
 
         return XML2Array::createArray($response);

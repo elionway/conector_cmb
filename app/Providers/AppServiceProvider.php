@@ -16,6 +16,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register()
     {
+        $this->app->singleton(\App\Services\ConnectorAudit::class);
         $this->app->singleton(\App\Services\ConnectorAlertReporter::class, function ($app) {
             return new \App\Services\ConnectorAlertReporter(
                 (array) $app['config']->get('connector_alerts', []),
@@ -47,6 +48,9 @@ class AppServiceProvider extends ServiceProvider
             $this->app->make(\App\Services\ConnectorAlertReporter::class)->setCommand($event->command);
         });
         $this->app['events']->listen(\Illuminate\Console\Events\CommandFinished::class, function ($event) {
+            if (in_array($event->command, \App\Services\ConnectorAudit::COMMANDS, true)) {
+                $this->app->make(\App\Services\ConnectorAudit::class)->finish((int)$event->exitCode);
+            }
             if (in_array($event->command, \App\Services\ConnectorAlertReporter::COMMANDS, true)) {
                 $this->app->make(\App\Services\ConnectorAlertReporter::class)->flush(3);
             }

@@ -17,7 +17,7 @@ class UpdateOrderShipment extends Command
      *
      * @var string
      */
-    protected $signature = 'orders:update:shipment';
+    protected $signature = 'orders:update:shipment {--audit-manual : Explicit manual execution during audit mode}';
 
     /**
      * The console command description.
@@ -33,6 +33,10 @@ class UpdateOrderShipment extends Command
      */
     public function handle()
     {
+        if (!app(\App\Services\ConnectorAudit::class)->begin('orders:update:shipment', (bool)$this->option('audit-manual'))) {
+            $this->error('Auditoria ativa: execute manualmente com --audit-manual.');
+            return 1;
+        }
         $orders = Opencart::orders(['filter_status' => Opencart::searchStatuses('sent_invoiced_to_sexp_order')]);
         $order_fatured = $this->ordersFatured();
         //$order_fatured = [];
@@ -51,6 +55,7 @@ class UpdateOrderShipment extends Command
                 && !empty($order_fatured[$order_id]['nf'])
                 && !empty($order_fatured[$order_id]['rastreio'])
             ){
+                app(\App\Services\ConnectorAudit::class)->record('shipment.legacy_override', ['order_id'=>$order_id]);
                 $this->log($order_id.'-baseado em planilha');
 
                 $this->updateOpencartOrderStatus(

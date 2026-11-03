@@ -45,15 +45,20 @@ class Erp {
 
     public function createOrder(array $order)
     {
+        return app(ConnectorAudit::class)->operation('erp.create', fn () => $this->createOrderAudited($order), ['order_id'=>$order['order_id'] ?? null]);
+    }
+
+    private function createOrderAudited(array $order)
+    {
 
         $order = $this->formatOrderDataToErp($order);
 
          DB::transaction(function () use ($order) {
             
-             $this->createCustomer($order['customer']);             
+             app(ConnectorAudit::class)->operation('erp.customer', fn () => $this->createCustomer($order['customer']));
 
-             $this->createOrderProducts($order['orders']);
-             $this->createBills($order['billing']);
+             app(ConnectorAudit::class)->operation('erp.items', fn () => $this->createOrderProducts($order['orders']));
+             app(ConnectorAudit::class)->operation('erp.billing', fn () => $this->createBills($order['billing']));
 
             //ajustar pedidos com erro de 1 item
             #$this->createOrUpdateItemsForOnlyErrors($order['orders']);
@@ -86,7 +91,8 @@ class Erp {
 
     public function find(int $orderId): ?Faturado
     {
-        $return = Faturado::where('PEDIDO', str_pad($orderId, 9, "0", STR_PAD_LEFT))->first(); 
+        $return = app(ConnectorAudit::class)->operation('erp.find_invoice', fn () => Faturado::where('PEDIDO', str_pad($orderId, 9, "0", STR_PAD_LEFT))->first(), ['order_id'=>$orderId]);
+        app(ConnectorAudit::class)->record('erp.invoice_result', ['order_id'=>$orderId, 'found'=>$return !== null]);
         //var_dump( "FATURADO: ". $orderId." ");
         //var_dump($return);
         return $return;

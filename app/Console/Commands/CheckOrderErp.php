@@ -20,7 +20,7 @@ class CheckOrderErp extends Command
      *
      * @var string
      */
-    protected $signature = 'orders:check:erp';
+    protected $signature = 'orders:check:erp {--audit-manual : Explicit manual execution during audit mode}';
 
     /**
      * The console command description.
@@ -36,6 +36,10 @@ class CheckOrderErp extends Command
      */
     public function handle()
     {
+        if (!app(\App\Services\ConnectorAudit::class)->begin('orders:check:erp', (bool)$this->option('audit-manual'))) {
+            $this->error('Auditoria ativa: execute manualmente com --audit-manual.');
+            return 1;
+        }
 
         sleep(2);
         #var_dump(Opencart::searchStatuses('with_error_item'));

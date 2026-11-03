@@ -19,6 +19,7 @@ final class ConnectorValidationTest extends TestCase
         Facade::clearResolvedInstances();
         Facade::setFacadeApplication($app);
         $app->instance('config', new Config());
+        $app->instance(App\Services\ConnectorAudit::class, new App\Services\ConnectorAudit(sys_get_temp_dir() . '/cmb-validation-' . bin2hex(random_bytes(8))));
         $app->instance('cache', new CacheRepository(new ArrayStore()));
         $app->instance(Factory::class, new Factory());
         set_error_handler(function ($severity, $message, $file, $line) {
@@ -264,6 +265,8 @@ final class ConnectorValidationTest extends TestCase
 
     private function output($command): void
     {
+        $input = new Symfony\Component\Console\Input\ArrayInput([], $command->getDefinition());
+        (new ReflectionProperty(Illuminate\Console\Command::class, 'input'))->setValue($command, $input);
         $command->setOutput(new Illuminate\Console\OutputStyle(new Symfony\Component\Console\Input\ArrayInput([]), new Symfony\Component\Console\Output\BufferedOutput()));
     }
 

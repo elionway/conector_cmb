@@ -16,7 +16,7 @@ class SendOrdersToSexp extends Command
      *
      * @var string
      */
-    protected $signature = 'orders:send:sexp';
+    protected $signature = 'orders:send:sexp {--audit-manual : Explicit manual execution during audit mode}';
 
     /**
      * The console command description.
@@ -32,6 +32,10 @@ class SendOrdersToSexp extends Command
      */
     public function handle()
     {
+        if (!app(\App\Services\ConnectorAudit::class)->begin('orders:send:sexp', (bool)$this->option('audit-manual'))) {
+            $this->error('Auditoria ativa: execute manualmente com --audit-manual.');
+            return 1;
+        }
         $orders = Opencart::orders(['filter_status' => Opencart::searchStatuses('reimport_new_order')]);
 
         if(empty($orders)){            

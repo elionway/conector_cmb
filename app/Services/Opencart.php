@@ -104,6 +104,7 @@ class Opencart {
     public function orders(?array $queryParams = [])
     {
         $response = $this->execute('order', 'get', null, $queryParams);
+        app(ConnectorAudit::class)->record('opencart.orders_received', ['status_code'=>$queryParams['filter_status'] ?? null, 'count'=>count(is_array($response['records'] ?? null) ? $response['records'] : [])]);
 
         $orders = [];
         $orders_valited = [];
@@ -132,10 +133,13 @@ class Opencart {
 
                 $order['products'] = $this->orderProductsMerge($order['products']);
 
+                app(ConnectorAudit::class)->record('order.validation_requested', ['order_id'=>$order['order_id']]);
                 if($this->validateOrderDataToErpOrChangeOrderStatusToErrorAndFail($order)){
+                    app(ConnectorAudit::class)->record('order.validation_passed', ['order_id'=>$order['order_id']]);
                  #   var_dump('VALIDOU: '.$order['order_id']);      
                     $orders_valited[$key] = $order;
                 }else{           
+                    app(ConnectorAudit::class)->record('order.validation_failed', ['order_id'=>$order['order_id'], 'error'=>true]);
                     $this->logValidateData('NÃO VALIDOU: '.$order['order_id']);
                 }
                 
@@ -949,7 +953,9 @@ class Opencart {
             ],
         ];
 
-        $this->execute('order/history', 'put', $params);
+        app(ConnectorAudit::class)->operation('opencart.order_history', function () use ($params) {
+            return $this->execute('order/history', 'put', $params);
+        }, ['order_id' => $order_id, 'target_status' => $data['order_status_id'], 'notify' => (bool)$data['notify']]);
     }
 
     public function statuses(?array $queryParams = []): Collection
@@ -1060,7 +1066,7 @@ class Opencart {
     private function accessToken()
     {
         try {
-            $response = Http::timeout(15)->withHeaders($this->headers())->post($this->action('access_token'));
+            $response = app(ConnectorAudit::class)->operation('opencart.authenticate', fn () => Http::timeout(15)->withHeaders($this->headers())->post($this->action('access_token')));
         } catch (\Illuminate\Http\Client\ConnectionException $e) {
             throw new \RuntimeException('Falha de conexão na autenticação da API CMB.');
         }
@@ -1118,7 +1124,7 @@ class Opencart {
 
         $url = $this->action($action, $queryParams);
 
-        $response = Http::withHeaders($headers)->$method($url, $params);
+        $response = app(ConnectorAudit::class)->operation('opencart.transport', fn () => Http::withHeaders($headers)->$method($url, $params));
 
         $this->log($url, $response, $params);
 

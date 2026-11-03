@@ -17,7 +17,7 @@ class UpdateOrderInvoice extends Command
      *
      * @var string
      */
-    protected $signature = 'orders:update:invoice';
+    protected $signature = 'orders:update:invoice {--audit-manual : Explicit manual execution during audit mode}';
 
     /**
      * The console command description.
@@ -33,6 +33,10 @@ class UpdateOrderInvoice extends Command
      */
     public function handle()
     {
+        if (!app(\App\Services\ConnectorAudit::class)->begin('orders:update:invoice', (bool)$this->option('audit-manual'))) {
+            $this->error('Auditoria ativa: execute manualmente com --audit-manual.');
+            return 1;
+        }
         $orders = Opencart::orders(['filter_status' => Opencart::searchStatuses('invoiced_order')]);
 
         foreach ($orders as $order) {
