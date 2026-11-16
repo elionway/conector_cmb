@@ -56,7 +56,7 @@ final class ShippingCarrierFlowTest extends TestCase
         $this->assertSame('000258', ShippingCarrier::erpTransportCode([
             'shipping' => ['code' => 'ow_rmcargas.ow_rmcargas'],
         ]));
-        $this->assertSame('000999', ShippingCarrier::erpTransportCode([
+        $this->assertSame('000007', ShippingCarrier::erpTransportCode([
             'shipping' => ['code' => 'ow_mscorreios.sedex'],
         ]));
     }
