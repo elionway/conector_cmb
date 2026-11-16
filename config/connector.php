@@ -7,7 +7,7 @@ return [
     'shipping' => [
         'erp_transport_codes' => [
             'rm_cargas' => env('ERP_RM_CARGAS_TRANSPORT_CODE', '000258'),
-            'correios' => env('ERP_CORREIOS_TRANSPORT_CODE', '000999'),
+            'correios' => env('ERP_CORREIOS_TRANSPORT_CODE', '000007'),
         ],
         'tracking_urls' => [
             'rm_cargas' => 'https://rmcargas.com.br/cmb/?codigoRastreamento=%s',
