@@ -275,7 +275,7 @@ final class ConnectorValidationTest extends TestCase
         $oc = Mockery::mock();
         $oc->shouldReceive('searchStatuses')->with('reimport_new_order')->once()->andReturn(1);
         $oc->shouldReceive('searchStatuses')->with('in_dispatchment_order')->once()->andReturn(20);
-        $oc->shouldReceive('orders')->with(['filter_status' => 1])->once()->andReturn([['order_id' => 900001, 'order_status_id' => 20]]);
+        $oc->shouldReceive('orders')->with(['filter_status' => 1])->once()->andReturn([['order_id' => 900001, 'order_status_id' => 20, 'shipping' => ['method' => 'Transportadora']]]);
         $oc->shouldNotReceive('orderHistory');
         $oc->shouldNotReceive('sendChangeOrdersNotValited');
         $sexp = Mockery::mock();
@@ -295,6 +295,10 @@ final class ConnectorValidationTest extends TestCase
         $oc = Mockery::mock();
         $oc->shouldReceive('searchStatuses')->with('after_dispatch_order')->once()->andReturn(30);
         $oc->shouldReceive('orders')->with(['filter_status' => 30])->once()->andReturn([]);
+        $oc->shouldReceive('searchStatuses')->with('reimport_new_order')->once()->andReturn(28);
+        $oc->shouldReceive('orders')->with(['filter_status' => 28])->once()->andReturn([]);
+        $oc->shouldReceive('searchStatuses')->with('new_order')->once()->andReturn(3);
+        $oc->shouldReceive('orders')->with(['filter_status' => 3])->once()->andReturn([]);
         $oc->shouldNotReceive('orderHistory');
         $erp = Mockery::mock();
         $erp->shouldNotReceive('createOrder');
@@ -306,12 +310,74 @@ final class ConnectorValidationTest extends TestCase
         $this->assertTrue(true);
     }
 
+    public function testCorreiosSkipsSexpAndRmCargasKeepsCurrentQueue(): void
+    {
+        $correios = [
+            'order_id' => 900101,
+            'shipping' => ['code' => 'ow_mscorreios.sedex', 'method' => 'SEDEX'],
+        ];
+        $rmCargas = [
+            'order_id' => 900102,
+            'shipping' => ['code' => 'ow_rmcargas.ow_rmcargas', 'method' => 'Transportadora'],
+        ];
+
+        $oc = Mockery::mock();
+        $oc->shouldReceive('searchStatuses')->with('reimport_new_order')->once()->andReturn(28);
+        $oc->shouldReceive('orders')->with(['filter_status' => 28])->once()->andReturn([$correios]);
+        $oc->shouldReceive('searchStatuses')->with('new_order')->once()->andReturn(3);
+        $oc->shouldReceive('orders')->with(['filter_status' => 3])->once()->andReturn([$rmCargas]);
+        $oc->shouldNotReceive('orderHistory');
+        App\Support\Opencart::swap($oc);
+
+        $command = new App\Console\Commands\SendOrdersToSexp();
+        $method = new ReflectionMethod($command, 'nextRmCargasOrders');
+        $method->setAccessible(true);
+
+        $this->assertSame([$rmCargas], array_values($method->invoke($command)));
+    }
+
+    public function testCorreiosGoesDirectlyToErpWhileRmCargasStillWaitsForSexp(): void
+    {
+        $rmReady = [
+            'order_id' => 900201,
+            'shipping' => ['code' => 'ow_rmcargas.ow_rmcargas', 'method' => 'Transportadora'],
+        ];
+        $rmPaid = [
+            'order_id' => 900202,
+            'shipping' => ['code' => 'ow_rmcargas.ow_rmcargas', 'method' => 'Transportadora'],
+        ];
+        $correiosLegacyReady = [
+            'order_id' => 900204,
+            'shipping' => ['code' => 'ow_mscorreios.pac', 'method' => 'PAC'],
+        ];
+        $correiosPaid = [
+            'order_id' => 900203,
+            'shipping' => ['code' => 'ow_mscorreios.sedex', 'method' => 'SEDEX'],
+        ];
+
+        $oc = Mockery::mock();
+        $oc->shouldReceive('searchStatuses')->with('after_dispatch_order')->once()->andReturn(30);
+        $oc->shouldReceive('orders')->with(['filter_status' => 30])->once()->andReturn([$rmReady, $correiosLegacyReady]);
+        $oc->shouldReceive('searchStatuses')->with('reimport_new_order')->once()->andReturn(28);
+        $oc->shouldReceive('orders')->with(['filter_status' => 28])->once()->andReturn([$correiosPaid, $rmPaid]);
+        $oc->shouldReceive('searchStatuses')->with('new_order')->once()->andReturn(3);
+        $oc->shouldReceive('orders')->with(['filter_status' => 3])->once()->andReturn([]);
+        App\Support\Opencart::swap($oc);
+
+        $command = new App\Console\Commands\SendOrdersToErp();
+        $method = new ReflectionMethod($command, 'ordersReadyForErp');
+        $method->setAccessible(true);
+        $orders = $method->invoke($command);
+
+        $this->assertSame([900201, 900204, 900203], array_column($orders, 'order_id'));
+    }
+
     public function testSexpUnavailableStillAttemptsStoreErrorUpdate(): void
     {
         // Documents why an unreachable SEXP does not make the real command read-only.
         $oc = Mockery::mock();
         $oc->shouldReceive('searchStatuses')->with('reimport_new_order')->once()->andReturn(1);
-        $oc->shouldReceive('orders')->with(['filter_status' => 1])->once()->andReturn([['order_id' => 900001, 'order_status_id' => 1]]);
+        $oc->shouldReceive('orders')->with(['filter_status' => 1])->once()->andReturn([['order_id' => 900001, 'order_status_id' => 1, 'shipping' => ['method' => 'Transportadora']]]);
         $oc->shouldReceive('sendChangeOrdersNotValited')->with(900001, Mockery::type('string'))->once();
         $oc->shouldNotReceive('orderHistory');
         $sexp = Mockery::mock();

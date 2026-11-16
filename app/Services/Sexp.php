@@ -97,11 +97,42 @@ class Sexp {
         return $response;
     }
 
-    public function updateInvoicedOrder(array $order, Faturado $invoice)
+    public function processInvoicedOrder(array $order, Faturado $invoice): void
+    {
+        $invoiceData = $this->invoiceData($order, $invoice);
+
+        if (ShippingCarrier::isCorreios($order)) {
+            $this->ensureOrderExists($order);
+        }
+
+        $this->sendInvoicedOrder($order, $invoiceData);
+    }
+
+    public function updateInvoicedOrder(array $order, Faturado $invoice): void
+    {
+        $this->sendInvoicedOrder($order, $this->invoiceData($order, $invoice));
+    }
+
+    public function ensureOrderExists(array $order): void
+    {
+        $response = $this->getOrder((int)$order['order_id']);
+
+        if (empty($response['error'])) {
+            return;
+        }
+
+        if (!$this->isMissingOrderResponse($response)) {
+            throw new \RuntimeException('Falha ao confirmar a existência da remessa no SEXP.');
+        }
+
+        $this->createOrder($order);
+    }
+
+    private function sendInvoicedOrder(array $order, array $invoiceData): void
     {
         $order_id = $order['order_id'];
 
-        $params = $this->parseUpdateOrderParams($order, $invoice);        
+        $params = $this->parseUpdateOrderParams($order, $invoiceData);
         
         try{
             $this->execute($params);
@@ -109,10 +140,11 @@ class Sexp {
         }catch (\Throwable $th) {
                 \App\Services\ConnectorAlertReporter::reportSafely($th, 'sexp');
             self::logSendSexp('FALHA NO UPDATE: '.$order_id);
-        }        
+            throw $th;
+        }
     }
 
-    private function parseUpdateOrderParams(array $order, Faturado $invoice): array
+    private function parseUpdateOrderParams(array $order, array $invoiceData): array
     {
         $order_id = $order['order_id'];
 
@@ -126,16 +158,59 @@ class Sexp {
                     'ws:informarNF' => [
                         'chaveUnica' => 'ECMB' . str_pad($order_id, 9, '0', STR_PAD_LEFT),
                         'codigoProduto' => '803479',
-                        'notaFiscal' => [
-                            'data' => Carbon::createFromFormat('Ymd', $invoice['EMISSAO'])->format('Y-m-d'),
-                            'numero' => $invoice['NOTA'],
-                            'serie' => trim($invoice['SERIE']),
-                            'valor' => $order['total'],
-                        ],
+                        'notaFiscal' => $invoiceData,
                     ],
                 ],
             ],
         ];
+    }
+
+    private function invoiceData(array $order, Faturado $invoice): array
+    {
+        $keyField = (string)config('connector.invoice_fields.key', 'CHAVE_NFE');
+        $protocolField = (string)config('connector.invoice_fields.protocol', 'PROTOCOLO_NFE');
+        $key = trim((string)$invoice->getAttribute($keyField));
+        $protocol = trim((string)$invoice->getAttribute($protocolField));
+
+        if (ShippingCarrier::isCorreios($order) && ($key === '' || $protocol === '')) {
+            throw new \RuntimeException('NF dos Correios sem chave NFe ou protocolo NFe.');
+        }
+
+        $date = \DateTimeImmutable::createFromFormat('!Ymd', (string)$invoice['EMISSAO']);
+
+        if ($date === false) {
+            throw new \RuntimeException('Data de emissão da NF inválida.');
+        }
+        $data = [];
+
+        if ($key !== '') {
+            $data['chaveNfe'] = $key;
+        }
+
+        $data['data'] = $date->format('Y-m-d\TH:i:s');
+        $data['numero'] = (int)$invoice['NOTA'];
+
+        if ($protocol !== '') {
+            $data['protocoloNfe'] = $protocol;
+        }
+
+        $data['serie'] = (int)trim((string)$invoice['SERIE']);
+        $data['valor'] = (float)$order['total'];
+
+        return $data;
+    }
+
+    private function isMissingOrderResponse(array $response): bool
+    {
+        $text = json_encode($response, JSON_UNESCAPED_UNICODE);
+
+        if (!is_string($text)) {
+            return false;
+        }
+
+        return stripos($text, 'Remessa não encontrada') !== false
+            || stripos($text, 'Remessa nÃ£o encontrada') !== false
+            || stripos($text, 'Remessa nĂ£o encontrada') !== false;
     }
 
     private function renderOrderFromRequest(array $response): array

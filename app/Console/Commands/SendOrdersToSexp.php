@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Support\Opencart;
 use App\Support\Sexp;
+use App\Services\ShippingCarrier;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
@@ -36,15 +37,7 @@ class SendOrdersToSexp extends Command
             $this->error('Auditoria ativa: execute manualmente com --audit-manual.');
             return 1;
         }
-        $orders = Opencart::orders(['filter_status' => Opencart::searchStatuses('reimport_new_order')]);
-
-        if(empty($orders)){            
-             $orders = Opencart::orders(['filter_status' => Opencart::searchStatuses('new_order')]);
-        }
-
-        if(empty($orders)){            
-             $orders = Opencart::orders(['filter_status' => Opencart::searchStatuses('in_dispatchment_order')]);
-        }
+        $orders = $this->nextRmCargasOrders();
 
         foreach ($orders as $order) {
             sleep(2);
@@ -99,6 +92,36 @@ class SendOrdersToSexp extends Command
                 }
             }
         }
+    }
+
+    private function nextRmCargasOrders(): array
+    {
+        foreach (['reimport_new_order', 'new_order', 'in_dispatchment_order'] as $status) {
+            $candidates = Opencart::orders(['filter_status' => Opencart::searchStatuses($status)]);
+            $orders = [];
+
+            foreach ($candidates as $key => $order) {
+                try {
+                    if (ShippingCarrier::isRmCargas($order)) {
+                        $orders[$key] = $order;
+                    } else {
+                        app(\App\Services\ConnectorAudit::class)->record(
+                            'order.correios_waiting_erp',
+                            ['order_id' => $order['order_id'] ?? null]
+                        );
+                    }
+                } catch (\Throwable $th) {
+                    \App\Services\ConnectorAlertReporter::reportSafely($th, 'runtime');
+                    $this->error('Pedido sem transportadora suportada: ' . ($order['order_id'] ?? 'desconhecido'));
+                }
+            }
+
+            if ($orders) {
+                return $orders;
+            }
+        }
+
+        return [];
     }
 
     private function createSexpOrder(array $order)

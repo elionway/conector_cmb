@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Support\Erp;
 use App\Support\Opencart;
 use App\Support\Sexp;
+use App\Services\ShippingCarrier;
 use Carbon\Carbon;
 use Illuminate\Console\Command;
 use Illuminate\Support\Str;
@@ -42,7 +43,7 @@ class SendOrdersToErp extends Command
         }
         sleep(2);
         #var_dump(Opencart::searchStatuses('with_error_item'));
-        $orders = Opencart::orders(['filter_status' => Opencart::searchStatuses('after_dispatch_order')]);
+        $orders = $this->ordersReadyForErp();
         #$orders = Opencart::orders(['filter_status' => Opencart::searchStatuses('with_error_item')]);
         
         //dd('parou no sendOrdersToErp');
@@ -68,6 +69,41 @@ class SendOrdersToErp extends Command
                 
                 $this->error($error);
                 var_dump($th->getMessage());
+            }
+        }
+    }
+
+    private function ordersReadyForErp(): array
+    {
+        $orders = [];
+
+        $this->appendCarrierOrders(
+            $orders,
+            Opencart::orders(['filter_status' => Opencart::searchStatuses('after_dispatch_order')])
+        );
+
+        foreach (['reimport_new_order', 'new_order'] as $status) {
+            $this->appendCarrierOrders(
+                $orders,
+                Opencart::orders(['filter_status' => Opencart::searchStatuses($status)]),
+                ShippingCarrier::CORREIOS
+            );
+        }
+
+        return array_values($orders);
+    }
+
+    private function appendCarrierOrders(array &$target, array $candidates, ?string $expectedCarrier = null): void
+    {
+        foreach ($candidates as $order) {
+            try {
+                $carrier = ShippingCarrier::fromOrder($order);
+                if ($expectedCarrier === null || $carrier === $expectedCarrier) {
+                    $target[(int)$order['order_id']] = $order;
+                }
+            } catch (\Throwable $th) {
+                \App\Services\ConnectorAlertReporter::reportSafely($th, 'runtime');
+                $this->error('Pedido sem transportadora suportada: ' . ($order['order_id'] ?? 'desconhecido'));
             }
         }
     }

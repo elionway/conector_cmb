@@ -593,7 +593,7 @@ class Opencart {
                 $error['products'][$key][] = sprintf($this->text_not_blank, 'PV_TRANSP' );
             }
 
-            $cod_trans = '000258'; //000258 RMCARGAS //'000062' pontual
+            $cod_trans = ShippingCarrier::erpTransportCode($order);
             if(!empty($order_product['PV_TRANSP']) && !($order_product['PV_TRANSP'] === $cod_trans)){
                 $error['products'][$key][] = "PV_TRANSP - Valor incorreto. Valor permitido é \"{$cod_trans}\". Valor Obtido: \"{$order_product['PV_TRANSP']}\"";
             }

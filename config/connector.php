@@ -4,6 +4,20 @@ return [
     'opencart_url' => env('OPENCART_URL', null),  
     'consumer_key' => env('OPENCART_CONSUMER_KEY', null),
     'consumer_secret' => env('OPENCART_CONSUMER_SECRET', null),
+    'shipping' => [
+        'erp_transport_codes' => [
+            'rm_cargas' => env('ERP_RM_CARGAS_TRANSPORT_CODE', '000258'),
+            'correios' => env('ERP_CORREIOS_TRANSPORT_CODE', '000xxx'), // alterar para o código correto da transportadora no ERP
+        ],
+        'tracking_urls' => [
+            'rm_cargas' => 'https://rmcargas.com.br/cmb/?codigoRastreamento=%s',
+            'correios' => 'https://rastreamento.correios.com.br/app/index.php?objetos=%s',
+        ],
+    ],
+    'invoice_fields' => [
+        'key' => env('ERP_INVOICE_KEY_FIELD', 'CHAVE_NFE'),
+        'protocol' => env('ERP_INVOICE_PROTOCOL_FIELD', 'PROTOCOLO_NFE'),
+    ],
     'search_status' => [
         'new_order'                   => 3,  //  3-Pagamento Aprovado >> 4-Enviado ao Sexp // 29-tratamento de dados
         'reimport_new_order'          => 28, //  28-reimportar, validação de dados >> 4-Enviado ao Sexp

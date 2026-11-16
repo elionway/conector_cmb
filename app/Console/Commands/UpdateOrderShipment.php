@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Support\Erp;
 use App\Support\Opencart;
 use App\Support\Sexp;
+use App\Services\ShippingCarrier;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
@@ -59,7 +60,7 @@ class UpdateOrderShipment extends Command
                 $this->log($order_id.'-baseado em planilha');
 
                 $this->updateOpencartOrderStatus(
-                        $order_id, 
+                        $order,
                         $order_fatured[$order_id]['nf'],
                         $order_fatured[$order_id]['rastreio']
                     );                
@@ -72,11 +73,12 @@ class UpdateOrderShipment extends Command
 
             if ($invoiced) {
                 $sexpOrder = Sexp::getOrder($order_id);
-                
-                if ($sexpOrder['status']['codigo'] == '5') {
-                    $this->updateOpencartOrderStatus($order_id, $invoiced['NOTA'], $sexpOrder['numeroPostagem']);
+
+                $sexpStatusCode = (string)($sexpOrder['status']['codigo'] ?? '');
+                if (ShippingCarrier::isSexpShipmentReady($order, $sexpStatusCode)) {
+                    $this->updateOpencartOrderStatus($order, $invoiced['NOTA'], $sexpOrder['numeroPostagem']);
                 }else{
-                    var_dump('Não Enviou: '.$order_id. ' STATUS: '.$sexpOrder['status']['codigo']);
+                    var_dump('Não Enviou: '.$order_id. ' STATUS: '.$sexpStatusCode);
                 }
             }
             // else{               
@@ -91,8 +93,10 @@ class UpdateOrderShipment extends Command
         }
     }
 
-    private function updateOpencartOrderStatus(int $orderId, string $invoiceNumber, string $trackingNumber)
+    private function updateOpencartOrderStatus(array $order, string $invoiceNumber, string $trackingNumber)
     {
+        $orderId = (int)$order['order_id'];
+        $trackingUrl = ShippingCarrier::trackingUrl($order, $trackingNumber);
 
         $this->log($orderId);
         var_dump('Alterou status: '.$orderId);
@@ -101,11 +105,11 @@ class UpdateOrderShipment extends Command
             'comment' => "
                 Seu <b>pedido {$orderId}</b> foi enviado. <br/> 
                 Código de Rastreamento: 
-                <b>Código de Rastreamento:</b> {$trackingNumber} <a href='https://rmcargas.com.br/cmb/?codigoRastreamento={$trackingNumber}' target='_blank'>Clique aqui para acompanhamento</a>, ou utilize a URL abaixo.<br /> 
+                <b>Código de Rastreamento:</b> {$trackingNumber} <a href='{$trackingUrl}' target='_blank'>Clique aqui para acompanhamento</a>, ou utilize a URL abaixo.<br />
                 
-                <a href='https://rmcargas.com.br/cmb/?codigoRastreamento={$trackingNumber}' target='_blank'>https://rmcargas.com.br/cmb/?codigoRastreamento={$trackingNumber}</a><br>
+                <a href='{$trackingUrl}' target='_blank'>{$trackingUrl}</a><br>
 
-                <a href='https://rmcargas.com.br/cmb/?codigoRastreamento={$trackingNumber}' target='_blank'>{$trackingNumber}</a>
+                <a href='{$trackingUrl}' target='_blank'>{$trackingNumber}</a>
                 <b>Número da Nota Fiscal:</b> {$invoiceNumber}
             ",
             'notify' => true,
