@@ -61,6 +61,29 @@ final class ShippingCarrierFlowTest extends TestCase
         ]));
     }
 
+    public function testSexpServiceIdsAreSelectedByCarrierAndCorreiosService(): void
+    {
+        $this->assertSame(17, ShippingCarrier::sexpServiceId([
+            'shipping' => ['code' => 'ow_rmcargas.ow_rmcargas', 'method' => 'Transportadora'],
+        ]));
+        $this->assertSame(18, ShippingCarrier::sexpServiceId([
+            'shipping' => ['code' => 'ow_mscorreios.03220', 'method' => 'SEDEX - prazo de 1 dia útil'],
+        ]));
+        $this->assertSame(19, ShippingCarrier::sexpServiceId([
+            'shipping' => ['code' => 'ow_mscorreios.03298', 'method' => 'PAC - prazo de 3 dias úteis'],
+        ]));
+    }
+
+    public function testUnknownCorreiosServiceIsBlockedBeforeSexp(): void
+    {
+        $this->expectException(DomainException::class);
+        $this->expectExceptionMessage('Serviço dos Correios');
+
+        ShippingCarrier::sexpServiceId([
+            'shipping' => ['code' => 'ow_mscorreios.unknown', 'method' => 'Serviço desconhecido'],
+        ]);
+    }
+
     public function testSexpReadyStatusIsCarrierSpecific(): void
     {
         $rmCargas = ['shipping' => ['code' => 'ow_rmcargas.ow_rmcargas']];

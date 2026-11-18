@@ -52,6 +52,27 @@ final class ShippingCarrier
         return $code;
     }
 
+    public static function sexpServiceId(array $order): int
+    {
+        $carrier = self::fromOrder($order);
+
+        if ($carrier === self::RM_CARGAS) {
+            return self::configuredSexpServiceId('rm_cargas');
+        }
+
+        $method = strtolower(trim((string)($order['shipping']['method'] ?? '')));
+
+        if (preg_match('/\bsedex\b/u', $method)) {
+            return self::configuredSexpServiceId('correios.sedex');
+        }
+
+        if (preg_match('/\bpac\b/u', $method)) {
+            return self::configuredSexpServiceId('correios.pac');
+        }
+
+        throw new DomainException('Serviço dos Correios ausente ou não suportado pelo SEXP.');
+    }
+
     public static function trackingUrl(array $order, string $trackingNumber): string
     {
         $carrier = self::fromOrder($order);
@@ -70,5 +91,16 @@ final class ShippingCarrier
 
         return ($carrier === self::RM_CARGAS && $statusCode === '5')
             || ($carrier === self::CORREIOS && $statusCode === '4');
+    }
+
+    private static function configuredSexpServiceId(string $service): int
+    {
+        $id = (int)config("connector.shipping.sexp_service_ids.{$service}", 0);
+
+        if ($id <= 0) {
+            throw new DomainException("ID do serviço SEXP não configurado para {$service}.");
+        }
+
+        return $id;
     }
 }
