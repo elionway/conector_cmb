@@ -172,10 +172,6 @@ class Sexp {
         $key = trim((string)$invoice->getAttribute($keyField));
         $protocol = trim((string)$invoice->getAttribute($protocolField));
 
-        if (ShippingCarrier::isCorreios($order) && ($key === '' || $protocol === '')) {
-            throw new \RuntimeException('NF dos Correios sem chave NFe ou protocolo NFe.');
-        }
-
         $date = \DateTimeImmutable::createFromFormat('!Ymd', (string)$invoice['EMISSAO']);
 
         if ($date === false) {

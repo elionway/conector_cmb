@@ -101,7 +101,7 @@ final class ShippingCarrierFlowTest extends TestCase
         $this->assertSame(987.65, $data['valor']);
     }
 
-    public function testCorreiosInvoiceWithoutKeyOrProtocolIsBlockedBeforeSexp(): void
+    public function testCorreiosInvoiceWithoutKeyOrProtocolUsesAvailableInvoiceFields(): void
     {
         $invoice = new Faturado();
         $invoice->setRawAttributes(['EMISSAO' => '20261115', 'NOTA' => '12345', 'SERIE' => '4']);
@@ -110,8 +110,12 @@ final class ShippingCarrierFlowTest extends TestCase
         $method = new ReflectionMethod(Sexp::class, 'invoiceData');
         $method->setAccessible(true);
 
-        $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('sem chave NFe ou protocolo NFe');
-        $method->invoke(new Sexp(), $order, $invoice);
+        $data = $method->invoke(new Sexp(), $order, $invoice);
+
+        $this->assertSame(['data', 'numero', 'serie', 'valor'], array_keys($data));
+        $this->assertSame('2026-11-15T00:00:00', $data['data']);
+        $this->assertSame(12345, $data['numero']);
+        $this->assertSame(4, $data['serie']);
+        $this->assertSame(10.0, $data['valor']);
     }
 }
