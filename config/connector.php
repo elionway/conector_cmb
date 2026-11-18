@@ -9,6 +9,13 @@ return [
             'rm_cargas' => env('ERP_RM_CARGAS_TRANSPORT_CODE', '000258'),
             'correios' => env('ERP_CORREIOS_TRANSPORT_CODE', '000007'),
         ],
+        'sexp_service_ids' => [
+            'rm_cargas' => 17,
+            'correios' => [
+                'sedex' => 18,
+                'pac' => 19,
+            ],
+        ],
         'tracking_urls' => [
             'rm_cargas' => 'https://rmcargas.com.br/cmb/?codigoRastreamento=%s',
             'correios' => 'https://rastreamento.correios.com.br/app/index.php?objetos=%s',

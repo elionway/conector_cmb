@@ -391,7 +391,7 @@ class Sexp {
                 'rua'         => Erp::prepareAddressStreet($order),
                 'uf'          => Erp::prepareState($order),
             ],
-            'idServico'       => 17, //12 Pontual, 17 RMcargas,
+            'idServico'       => ShippingCarrier::sexpServiceId($order),
             'nomeCliente'     => Erp::prepareFullname($order),
             'codigoCliente'   => 1,
             'quantidade'      => $this->totalProductQuantities($order['products']),
