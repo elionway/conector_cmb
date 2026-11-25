@@ -41,8 +41,6 @@ class UpdateOrderInvoice extends Command
 
         foreach ($orders as $order) {
             if ($invoiced = Erp::find($order['order_id'])) {
-                // Para Correios, o serviço valida a NF, cria a remessa somente agora
-                // e informa a NF imediatamente depois. RM Cargas mantém o fluxo atual.
                 Sexp::processInvoicedOrder($order, $invoiced);
 
                 $this->updateOpencartOrderStatus($order['order_id']);

@@ -77,30 +77,22 @@ class SendOrdersToErp extends Command
     {
         $orders = [];
 
-        $this->appendCarrierOrders(
-            $orders,
-            Opencart::orders(['filter_status' => Opencart::searchStatuses('after_dispatch_order')])
-        );
-
-        foreach (['reimport_new_order', 'new_order'] as $status) {
+        foreach (['after_dispatch_order', 'reimport_new_order', 'new_order'] as $status) {
             $this->appendCarrierOrders(
                 $orders,
-                Opencart::orders(['filter_status' => Opencart::searchStatuses($status)]),
-                ShippingCarrier::CORREIOS
+                Opencart::orders(['filter_status' => Opencart::searchStatuses($status)])
             );
         }
 
         return array_values($orders);
     }
 
-    private function appendCarrierOrders(array &$target, array $candidates, ?string $expectedCarrier = null): void
+    private function appendCarrierOrders(array &$target, array $candidates): void
     {
         foreach ($candidates as $order) {
             try {
-                $carrier = ShippingCarrier::fromOrder($order);
-                if ($expectedCarrier === null || $carrier === $expectedCarrier) {
-                    $target[(int)$order['order_id']] = $order;
-                }
+                ShippingCarrier::fromOrder($order);
+                $target[(int)$order['order_id']] = $order;
             } catch (\Throwable $th) {
                 \App\Services\ConnectorAlertReporter::reportSafely($th, 'runtime');
                 $this->error('Pedido sem transportadora suportada: ' . ($order['order_id'] ?? 'desconhecido'));
