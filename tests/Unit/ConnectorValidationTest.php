@@ -273,9 +273,8 @@ final class ConnectorValidationTest extends TestCase
     public function testSexpExistingSyntheticOrderDoesNotWrite(): void
     {
         $oc = Mockery::mock();
-        $oc->shouldReceive('searchStatuses')->with('reimport_new_order')->once()->andReturn(1);
-        $oc->shouldReceive('searchStatuses')->with('in_dispatchment_order')->once()->andReturn(20);
-        $oc->shouldReceive('orders')->with(['filter_status' => 1])->once()->andReturn([['order_id' => 900001, 'order_status_id' => 20, 'shipping' => ['method' => 'Transportadora']]]);
+        $oc->shouldReceive('searchStatuses')->with('in_dispatchment_order')->twice()->andReturn(20);
+        $oc->shouldReceive('orders')->with(['filter_status' => 20])->once()->andReturn([['order_id' => 900001, 'order_status_id' => 20, 'shipping' => ['method' => 'Transportadora']]]);
         $oc->shouldNotReceive('orderHistory');
         $oc->shouldNotReceive('sendChangeOrdersNotValited');
         $sexp = Mockery::mock();
@@ -310,7 +309,7 @@ final class ConnectorValidationTest extends TestCase
         $this->assertTrue(true);
     }
 
-    public function testCorreiosSkipsSexpAndRmCargasKeepsCurrentQueue(): void
+    public function testEarlySexpOnlyReadsLegacyDispatchStatus(): void
     {
         $correios = [
             'order_id' => 900101,
@@ -322,10 +321,8 @@ final class ConnectorValidationTest extends TestCase
         ];
 
         $oc = Mockery::mock();
-        $oc->shouldReceive('searchStatuses')->with('reimport_new_order')->once()->andReturn(28);
-        $oc->shouldReceive('orders')->with(['filter_status' => 28])->once()->andReturn([$correios]);
-        $oc->shouldReceive('searchStatuses')->with('new_order')->once()->andReturn(3);
-        $oc->shouldReceive('orders')->with(['filter_status' => 3])->once()->andReturn([$rmCargas]);
+        $oc->shouldReceive('searchStatuses')->with('in_dispatchment_order')->once()->andReturn(4);
+        $oc->shouldReceive('orders')->with(['filter_status' => 4])->once()->andReturn([$rmCargas, $correios]);
         $oc->shouldNotReceive('orderHistory');
         App\Support\Opencart::swap($oc);
 
@@ -336,7 +333,7 @@ final class ConnectorValidationTest extends TestCase
         $this->assertSame([$rmCargas], array_values($method->invoke($command)));
     }
 
-    public function testCorreiosGoesDirectlyToErpWhileRmCargasStillWaitsForSexp(): void
+    public function testBothCarriersGoDirectlyToErpAndLegacyOrdersRemainEligible(): void
     {
         $rmReady = [
             'order_id' => 900201,
@@ -369,14 +366,14 @@ final class ConnectorValidationTest extends TestCase
         $method->setAccessible(true);
         $orders = $method->invoke($command);
 
-        $this->assertSame([900201, 900204, 900203], array_column($orders, 'order_id'));
+        $this->assertSame([900201, 900204, 900203, 900202], array_column($orders, 'order_id'));
     }
 
     public function testSexpUnavailableStillAttemptsStoreErrorUpdate(): void
     {
         // Documents why an unreachable SEXP does not make the real command read-only.
         $oc = Mockery::mock();
-        $oc->shouldReceive('searchStatuses')->with('reimport_new_order')->once()->andReturn(1);
+        $oc->shouldReceive('searchStatuses')->with('in_dispatchment_order')->once()->andReturn(1);
         $oc->shouldReceive('orders')->with(['filter_status' => 1])->once()->andReturn([['order_id' => 900001, 'order_status_id' => 1, 'shipping' => ['method' => 'Transportadora']]]);
         $oc->shouldReceive('sendChangeOrdersNotValited')->with(900001, Mockery::type('string'))->once();
         $oc->shouldNotReceive('orderHistory');

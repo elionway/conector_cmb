@@ -96,32 +96,21 @@ class SendOrdersToSexp extends Command
 
     private function nextRmCargasOrders(): array
     {
-        foreach (['reimport_new_order', 'new_order', 'in_dispatchment_order'] as $status) {
-            $candidates = Opencart::orders(['filter_status' => Opencart::searchStatuses($status)]);
-            $orders = [];
-
-            foreach ($candidates as $key => $order) {
-                try {
-                    if (ShippingCarrier::isRmCargas($order)) {
-                        $orders[$key] = $order;
-                    } else {
-                        app(\App\Services\ConnectorAudit::class)->record(
-                            'order.correios_waiting_erp',
-                            ['order_id' => $order['order_id'] ?? null]
-                        );
-                    }
-                } catch (\Throwable $th) {
-                    \App\Services\ConnectorAlertReporter::reportSafely($th, 'runtime');
-                    $this->error('Pedido sem transportadora suportada: ' . ($order['order_id'] ?? 'desconhecido'));
+        // Somente remessas RM já iniciadas pelo fluxo anterior.
+        $status = Opencart::searchStatuses('in_dispatchment_order');
+        $orders = [];
+        foreach (Opencart::orders(['filter_status' => $status]) as $key => $order) {
+            try {
+                if (ShippingCarrier::isRmCargas($order)) {
+                    $orders[$key] = $order;
                 }
-            }
-
-            if ($orders) {
-                return $orders;
+            } catch (\Throwable $th) {
+                \App\Services\ConnectorAlertReporter::reportSafely($th, 'runtime');
+                $this->error('Pedido sem transportadora suportada: ' . ($order['order_id'] ?? 'desconhecido'));
             }
         }
 
-        return [];
+        return $orders;
     }
 
     private function createSexpOrder(array $order)
