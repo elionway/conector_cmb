@@ -101,9 +101,8 @@ class Sexp {
     {
         $invoiceData = $this->invoiceData($order, $invoice);
 
-        if (ShippingCarrier::isCorreios($order)) {
-            $this->ensureOrderExists($order);
-        }
+        ShippingCarrier::fromOrder($order);
+        $this->ensureOrderExists($order);
 
         $this->sendInvoicedOrder($order, $invoiceData);
     }
