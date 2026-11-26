@@ -74,19 +74,27 @@ class Sexp {
          
     }
 
-    public function getOrder(int $order_id): array
+    private function orderQuery(int $order_id): array
     {
-
-
-        $params = [
+        return $this->parseSearchOrderParams([
             'chaveUnica' => 'ECMB' . str_pad($order_id, 9, '0', STR_PAD_LEFT),
             'codigoProduto' => '803479',
-        ];
+        ]);
+    }
 
-        $params = $this->parseSearchOrderParams($params);
+    public function inspectOrder(int $order_id): Response
+    {
+        $params = $this->orderQuery($order_id);
+        return app(ConnectorAudit::class)->operation(
+            'sexp.query',
+            fn () => $this->sendSoap($params),
+            ['order_id' => $order_id]
+        );
+    }
 
-        //dd($params);
-        $order = $this->execute($params);
+    public function getOrder(int $order_id): array
+    {
+        $order = $this->execute($this->orderQuery($order_id));
        
         $response = $this->renderOrderFromRequest($order);
         app(ConnectorAudit::class)->record('sexp.status_received', [
@@ -284,7 +292,11 @@ class Sexp {
 
     private function executeTransport(array $params)
     {
-        //return  [];
+        return XML2Array::createArray($this->sendSoap($params)->body());
+    }
+
+    private function sendSoap(array $params): Response
+    {
         $params = $this->createXmlFromArray($params);
 
         $url = 'http://192.168.250.75/sexp-ws/SexpWS?wsdl';
@@ -300,9 +312,7 @@ class Sexp {
 
 
         app(ConnectorAudit::class)->record('sexp.http_received', ['http_status'=>$request->status()]);
-        $response = $request->body();
-
-        return XML2Array::createArray($response);
+        return $request;
     }
 
     private function log(string $url, Response $response, ?string $params = '',  bool $isCreatingOrder = false)
