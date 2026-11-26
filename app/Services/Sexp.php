@@ -106,14 +106,14 @@ class Sexp {
         return $response;
     }
 
-    public function processInvoicedOrder(array $order, Faturado $invoice): void
+    public function processInvoicedOrder(array $order, Faturado $invoice, ?callable $capture = null): void
     {
         $invoiceData = $this->invoiceData($order, $invoice);
 
         ShippingCarrier::fromOrder($order);
         $this->ensureOrderExists($order);
 
-        $this->sendInvoicedOrder($order, $invoiceData);
+        $this->sendInvoicedOrder($order, $invoiceData, $capture);
     }
 
     public function updateInvoicedOrder(array $order, Faturado $invoice): void
@@ -136,14 +136,14 @@ class Sexp {
         $this->createOrder($order);
     }
 
-    private function sendInvoicedOrder(array $order, array $invoiceData): void
+    private function sendInvoicedOrder(array $order, array $invoiceData, ?callable $capture = null): void
     {
         $order_id = $order['order_id'];
 
         $params = $this->parseUpdateOrderParams($order, $invoiceData);
         
         try{
-            $this->execute($params);
+            $this->execute($params, $capture);
             self::logSendSexp('UPDATE: '.$order_id);
         }catch (\Throwable $th) {
             self::logSendSexp('FALHA NO UPDATE: ' . $order_id . ' operacao=informarNF ' . SexpWriteFailure::describe($th));
@@ -269,7 +269,7 @@ class Sexp {
         return Str::contains($xml, 'incluirRemessa');
     }
 
-    private function execute(array $params)
+    private function execute(array $params, ?callable $capture = null)
     {
         $body = $params['soapenv:Envelope']['soapenv:Body'] ?? [];
         $action = array_key_first($body);
@@ -277,12 +277,12 @@ class Sexp {
         $step = $steps[$action] ?? 'sexp.unknown';
         $key = $body[$action]['chaveUnica'] ?? $body[$action]['remessa']['chaveUnica'] ?? '';
         $fields = preg_match('/^ECMB([0-9]{9})$/D', $key, $match) ? ['order_id'=>(int)$match[1]] : [];
-        return app(ConnectorAudit::class)->operation($step, fn () => $this->executeTransport($params), $fields);
+        return app(ConnectorAudit::class)->operation($step, fn () => $this->executeTransport($params, $capture), $fields);
     }
 
-    private function executeTransport(array $params)
+    private function executeTransport(array $params, ?callable $capture = null)
     {
-        $response = $this->sendSoap($params);
+        $response = $this->sendSoap($params, $capture);
         $action = array_key_first($params['soapenv:Envelope']['soapenv:Body']);
         if ($action !== 'ws:consultarRemessa') {
             SexpWriteFailure::check($response, substr($action, 3) . 'Response');
@@ -290,17 +290,22 @@ class Sexp {
         return XML2Array::createArray($response->body());
     }
 
-    private function sendSoap(array $params): Response
+    private function sendSoap(array $params, ?callable $capture = null): Response
     {
         $params = $this->createXmlFromArray($params);
 
         $url = 'http://192.168.250.75/sexp-ws/SexpWS?wsdl';
 
+        $contentType = 'text/xml';
+        if ($capture !== null) {
+            $capture($params, $url, $contentType);
+        }
+
         $request = Http::withHeaders([
             'Content-Type' => 'text/xml;charset=UTF-8', 
             'Accept-Encoding' => 'gzip, deflate'
         ])
-        ->withBody($params, 'text/xml')
+        ->withBody($params, $contentType)
         ->post($url);
 
         $this->log($url, $request, $params, $this->isCreatingOrder($params));
