@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Support\Erp;
 use App\Support\Opencart;
 use App\Support\Sexp;
 use App\Services\ShippingCarrier;
@@ -40,56 +41,23 @@ class SendOrdersToSexp extends Command
         $orders = $this->nextRmCargasOrders();
 
         foreach ($orders as $order) {
-            sleep(2);
-
-           // dd($order);
-            $this->info('Enviado ao SEXP: '.$order['order_id']);
-
             try {
-                
-                $sexp_order = Sexp::getOrder($order['order_id']);
-                //dd($sexp_order);
-
-                if(!empty($sexp_order['error'])
-                    && !empty($sexp_order['error']['soap:Envelope']['soap:Body']['soap:Fault']['faultstring'])
-                    && ($sexp_order['error']['soap:Envelope']['soap:Body']['soap:Fault']['faultstring'] == "Remessa nĂ£o encontrada."
-                    OR $sexp_order['error']['soap:Envelope']['soap:Body']['soap:Fault']['faultstring'] == "Remessa nĂ£o encontrada.")){
-
-                        $this->createSexpOrder($order);
-                }else{
-                    var_dump('---');
-                    $this->info('Encontrou order, vai altear o status '.$order['order_id']);
-                    // dd($order);
-
-                    if($order['order_status_id'] == Opencart::searchStatuses('in_dispatchment_order')){
-                        var_dump('Mesmo Status não alterou');
-                        // return;
-                   }
-                   else{
-                    $this->updateOpencartOrderStatus($order['order_id']);
-                    
-                    var_dump("{$order['order_id']} - O pedido já existe no SEXP Status Alterado");
-                   }
-                    
+                $response = Sexp::getOrder($order['order_id']);
+                if (empty($response['error'])) {
+                    continue;
                 }
-             } catch (\Throwable $th) {
-                \App\Services\ConnectorAlertReporter::reportSafely($th, 'sexp');
-                
-                try {
-                //     var_dump('Criou order: ').$order['order_id'];
-                //     Sexp::createOrder($order);    
-                //    $this->updateOpencartOrderStatus($order['order_id']);
-                    $this->createSexpOrder($order);
-                } catch (\Throwable $th) {
-                \App\Services\ConnectorAlertReporter::reportSafely($th, 'sexp');
-                    $comment = 'Erro na criação order: ';
-                    $comment .= "{$order['order_id']} - Falhou: {$th->getMessage()}";
-                    var_dump($comment );
-
-                    Opencart::sendChangeOrdersNotValited($order['order_id'], $comment);
-
-                    $this->error($comment);
+                if (!Sexp::isMissingOrderResponse($response)) {
+                    throw new \RuntimeException('Falha na consulta da remessa legada.');
                 }
+                $invoice = Erp::find($order['order_id']);
+                if ($invoice) {
+                    Sexp::processInvoicedOrder($order, $invoice);
+                }
+            } catch (\UnexpectedValueException $error) {
+                $this->warn("Pedido {$order['order_id']}: " . $error->getMessage());
+            } catch (\Throwable $error) {
+                \App\Services\ConnectorAlertReporter::reportSafely($error, 'sexp');
+                $this->error("Pedido {$order['order_id']}: falha na consulta ou integração.");
             }
         }
     }
@@ -113,41 +81,4 @@ class SendOrdersToSexp extends Command
         return $orders;
     }
 
-    private function createSexpOrder(array $order)
-    {
-        var_dump('Criou order: ').$order['order_id'];
-        Sexp::createOrder($order);    
-        
-        if($order['order_status_id'] == Opencart::searchStatuses('in_dispatchment_order')){
-             var_dump('Mesmo Status não alterou');
-             return;
-        }
-
-        $this->updateOpencartOrderStatus($order['order_id']);
-    }
-
-    private function updateOpencartOrderStatus(int $order_id)
-    {
-        $this->log($order_id);
-
-        Opencart::orderHistory($order_id,
-         [
-            'order_status_id' => Opencart::updateStatuses('integrated_sexp_order'),
-            'comment' => 'Enviado para o SEXP',
-            'notify' => false,
-        ]);
-    }
-
-    public function log(string $log)
-    {
-        var_dump($log);
-
-        $log = date("Y-m-d h:i:sa")." - ".$log ;
-        $log = $log . PHP_EOL;
-        File::append(
-            storage_path('/logs/pedidos_novos_enviados_ao_sexp.log'), $log
-       );
-    }
-
-    
 }

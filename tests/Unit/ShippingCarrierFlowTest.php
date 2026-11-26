@@ -102,8 +102,8 @@ final class ShippingCarrierFlowTest extends TestCase
             'EMISSAO' => '20261115',
             'NOTA' => '12345',
             'SERIE' => '4',
-            'CHAVE_NFE' => 'NFE-SYNTHETIC-KEY',
-            'PROTOCOLO_NFE' => 'SYNTHETIC-PROTOCOL',
+            'CHAVENFE' => str_repeat('1', 44),
+            'PROTOCOLO' => '123456789012345',
         ]);
         $order = [
             'total' => 987.65,
@@ -121,24 +121,26 @@ final class ShippingCarrierFlowTest extends TestCase
         $this->assertSame('2026-11-15T00:00:00', $data['data']);
         $this->assertSame(12345, $data['numero']);
         $this->assertSame(4, $data['serie']);
+        $this->assertSame(str_repeat('1', 44), $data['chaveNfe']);
+        $this->assertSame('123456789012345', $data['protocoloNfe']);
         $this->assertSame(987.65, $data['valor']);
     }
 
-    public function testCorreiosInvoiceWithoutKeyOrProtocolUsesAvailableInvoiceFields(): void
+    /** @dataProvider invalidInvoiceFields */
+    public function testIncompleteInvoiceIsRejectedBeforeContactingSexp(string $field, string $value): void
     {
         $invoice = new Faturado();
-        $invoice->setRawAttributes(['EMISSAO' => '20261115', 'NOTA' => '12345', 'SERIE' => '4']);
-        $order = ['total' => 10.0, 'shipping' => ['code' => 'ow_mscorreios.sedex']];
+        $fields = ['EMISSAO' => '20261115', 'NOTA' => '12345', 'SERIE' => '4',
+            'CHAVENFE' => str_repeat('1', 44), 'PROTOCOLO' => '123456789012345'];
+        $fields[$field] = $value;
+        $invoice->setRawAttributes($fields);
+        $this->expectException(\UnexpectedValueException::class);
+        (new Sexp())->processInvoicedOrder(['total' => 10], $invoice);
+    }
 
-        $method = new ReflectionMethod(Sexp::class, 'invoiceData');
-        $method->setAccessible(true);
-
-        $data = $method->invoke(new Sexp(), $order, $invoice);
-
-        $this->assertSame(['data', 'numero', 'serie', 'valor'], array_keys($data));
-        $this->assertSame('2026-11-15T00:00:00', $data['data']);
-        $this->assertSame(12345, $data['numero']);
-        $this->assertSame(4, $data['serie']);
-        $this->assertSame(10.0, $data['valor']);
+    public static function invalidInvoiceFields(): array
+    {
+        return [['NOTA', ''], ['NOTA', '0000'], ['SERIE', ''], ['EMISSAO', '20260230'],
+            ['CHAVENFE', ''], ['CHAVENFE', '123'], ['PROTOCOLO', '']];
     }
 }
