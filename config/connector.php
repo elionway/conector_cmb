@@ -21,6 +21,8 @@ return [
             'correios' => 'https://rastreamento.correios.com.br/app/index.php?objetos=%s',
         ],
     ],
+    // Código ou ID do campo CPF no endereço de entrega do pedido.
+    'shipping_recipient_cpf_field' => env('OPENCART_SHIPPING_CPF_FIELD', 'cpf'),
     'invoice_fields' => [
         'key' => env('ERP_INVOICE_KEY_FIELD', 'CHAVE_NFE'),
         'protocol' => env('ERP_INVOICE_PROTOCOL_FIELD', 'PROTOCOLO_NFE'),

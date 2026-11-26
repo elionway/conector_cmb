@@ -404,6 +404,7 @@ class Sexp {
             'nomeCliente'     => Erp::prepareFullname($order),
             'codigoCliente'   => 1,
             'quantidade'      => $this->totalProductQuantities($order['products']),
+            'responsavelRecebimento' => ShippingRecipient::fromShipping($order['shipping'] ?? []),
             'tipoEmbalagem'   => 'CAIXA/PACOTE',
             'valor'           => $order['total'],
             'altura'          => number_format((float)$package['height'], 3, '.', ''),
