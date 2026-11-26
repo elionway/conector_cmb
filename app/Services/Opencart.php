@@ -101,7 +101,7 @@ class Opencart {
      * @param ?array $queryParams
      * @return Order[]
      */
-    public function orders(?array $queryParams = [])
+    public function orders(?array $queryParams = [], ?int $onlyOrder = null)
     {
         $response = $this->execute('order', 'get', null, $queryParams);
         app(ConnectorAudit::class)->record('opencart.orders_received', ['status_code'=>$queryParams['filter_status'] ?? null, 'count'=>count(is_array($response['records'] ?? null) ? $response['records'] : [])]);
@@ -117,7 +117,10 @@ class Opencart {
             $orders = $response['records'];
             $permited_orders = [];
 
-            foreach ($orders as $key => $order) {                               
+            foreach ($orders as $key => $order) {
+                if ($onlyOrder !== null && (int)($order['order_id'] ?? 0) !== $onlyOrder) {
+                    continue;
+                }
 
                 //dd($order);
                 #var_dump('INICIOU: '.$order['order_id']);     
