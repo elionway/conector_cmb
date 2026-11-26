@@ -17,7 +17,7 @@ class UpdateOrderInvoice extends Command
      *
      * @var string
      */
-    protected $signature = 'orders:update:invoice {--audit-manual : Explicit manual execution during audit mode}';
+    protected $signature = 'orders:update:invoice {--capturar= : Envia somente este pedido e salva o XML de informarNF} {--audit-manual : Explicit manual execution during audit mode}';
 
     /**
      * The console command description.
@@ -33,19 +33,41 @@ class UpdateOrderInvoice extends Command
      */
     public function handle()
     {
+        $target = $this->option('capturar');
+        if ($this->input->hasParameterOption('--capturar') && (!ctype_digit((string)$target) || strlen((string)$target) > 9 || (int)$target === 0)) {
+            $this->error('Use --capturar=NUMERO_DO_PEDIDO.');
+            return self::FAILURE;
+        }
         if (!app(\App\Services\ConnectorAudit::class)->begin('orders:update:invoice', (bool)$this->option('audit-manual'))) {
             $this->error('Auditoria ativa: execute manualmente com --audit-manual.');
             return 1;
         }
-        $orders = Opencart::orders(['filter_status' => Opencart::searchStatuses('invoiced_order')]);
+        $filter = ['filter_status' => Opencart::searchStatuses('invoiced_order')];
+        $capture = null;
+        if ($target !== null) {
+            $orders = Opencart::orders($filter, (int)$target);
+            if (!$orders) {
+                $this->warn('Pedido ausente na lista de faturamento elegível.');
+                return self::FAILURE;
+            }
+            $capture = function (string $xml, string $url, string $contentType) use ($target): void {
+                $path = \App\Services\InvoiceRequestCapture::save(storage_path('app/sexp-capturas'), (int)$target, $xml, $url, $contentType);
+                $this->info('Captura de informarNF: ' . $path);
+            };
+        } else {
+            $orders = Opencart::orders($filter);
+        }
 
         $failed = false;
         foreach ($orders as $order) {
             if ($invoiced = Erp::find($order['order_id'])) {
                 try {
-                    Sexp::processInvoicedOrder($order, $invoiced);
+                    Sexp::processInvoicedOrder($order, $invoiced, $capture);
                 } catch (\UnexpectedValueException $error) {
                     $this->warn("Pedido {$order['order_id']}: " . $error->getMessage());
+                    if ($capture) {
+                        return self::FAILURE;
+                    }
                     continue;
                 } catch (\Throwable $error) {
                     \App\Services\ConnectorAlertReporter::reportSafely($error, 'sexp');
@@ -55,6 +77,9 @@ class UpdateOrderInvoice extends Command
                 }
 
                 $this->updateOpencartOrderStatus($order['order_id']);
+            } elseif ($capture) {
+                $this->warn('ERP ainda sem faturamento para o pedido.');
+                return self::FAILURE;
             }
         }
         return $failed ? self::FAILURE : self::SUCCESS;
