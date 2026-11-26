@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Exceptions\SexpWriteFailure;
 use App\Models\Faturado;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Http\Client\Response;
@@ -145,8 +146,8 @@ class Sexp {
             $this->execute($params);
             self::logSendSexp('UPDATE: '.$order_id);
         }catch (\Throwable $th) {
-                \App\Services\ConnectorAlertReporter::reportSafely($th, 'sexp');
-            self::logSendSexp('FALHA NO UPDATE: '.$order_id);
+            self::logSendSexp('FALHA NO UPDATE: ' . $order_id . ' operacao=informarNF ' . SexpWriteFailure::describe($th));
+            \App\Services\ConnectorAlertReporter::reportSafely($th, 'sexp');
             throw $th;
         }
     }
@@ -284,12 +285,7 @@ class Sexp {
         $response = $this->sendSoap($params);
         $action = array_key_first($params['soapenv:Envelope']['soapenv:Body']);
         if ($action !== 'ws:consultarRemessa') {
-            $response->throw();
-            $expected = substr($action, 3) . 'Response';
-            $xml = simplexml_load_string($response->body(), 'SimpleXMLElement', LIBXML_NONET | LIBXML_NOERROR | LIBXML_NOWARNING);
-            if ($xml === false || !$xml->xpath('/*[local-name()="Envelope"]/*[local-name()="Body"]/*[local-name()="' . $expected . '"]')) {
-                throw new \RuntimeException('SEXP não confirmou a operação ' . $action);
-            }
+            SexpWriteFailure::check($response, substr($action, 3) . 'Response');
         }
         return XML2Array::createArray($response->body());
     }
