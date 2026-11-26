@@ -17,6 +17,8 @@ use Illuminate\Support\Str;
 
 
 class Sexp {
+    public const WSDL = 'http://192.168.250.75/sexp-ws/SexpWS?wsdl';
+
     private ?array $address_settings = [];
 
     public function __construct()
@@ -294,7 +296,7 @@ class Sexp {
     {
         $params = $this->createXmlFromArray($params);
 
-        $url = 'http://192.168.250.75/sexp-ws/SexpWS?wsdl';
+        $url = self::WSDL;
 
         $contentType = 'text/xml';
         if ($capture !== null) {
