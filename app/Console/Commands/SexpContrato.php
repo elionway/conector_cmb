@@ -3,7 +3,9 @@
 namespace App\Console\Commands;
 
 use App\Services\Sexp;
+use App\Services\SexpInvoiceContract;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Http;
 use SoapClient;
 use Throwable;
 
@@ -14,17 +16,18 @@ class SexpContrato extends Command
 
     public function handle(): int
     {
-        if (!class_exists(SoapClient::class)) {
-            $this->error('A extensão SOAP do PHP está indisponível.');
-            return self::FAILURE;
-        }
-
         try {
-            $client = new SoapClient(Sexp::WSDL, [
-                'cache_wsdl' => WSDL_CACHE_NONE,
-                'stream_context' => stream_context_create(['http' => ['timeout' => 10]]),
-            ]);
-            $types = $client->__getTypes();
+            if (class_exists(SoapClient::class)) {
+                $client = new SoapClient(Sexp::WSDL, [
+                    'cache_wsdl' => WSDL_CACHE_NONE,
+                    'stream_context' => stream_context_create(['http' => ['timeout' => 10]]),
+                ]);
+                $types = $client->__getTypes();
+            } else {
+                $types = SexpInvoiceContract::types(Sexp::WSDL, static function (string $url): string {
+                    return Http::timeout(10)->withOptions(['allow_redirects' => false])->get($url)->throw()->body();
+                });
+            }
         } catch (Throwable $error) {
             $this->error('Falha ao ler o contrato WSDL do SEXP.');
             return self::FAILURE;
