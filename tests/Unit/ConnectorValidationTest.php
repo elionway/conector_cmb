@@ -273,7 +273,7 @@ final class ConnectorValidationTest extends TestCase
     public function testSexpExistingSyntheticOrderDoesNotWrite(): void
     {
         $oc = Mockery::mock();
-        $oc->shouldReceive('searchStatuses')->with('in_dispatchment_order')->twice()->andReturn(20);
+        $oc->shouldReceive('searchStatuses')->with('in_dispatchment_order')->once()->andReturn(20);
         $oc->shouldReceive('orders')->with(['filter_status' => 20])->once()->andReturn([['order_id' => 900001, 'order_status_id' => 20, 'shipping' => ['method' => 'Transportadora']]]);
         $oc->shouldNotReceive('orderHistory');
         $oc->shouldNotReceive('sendChangeOrdersNotValited');
@@ -369,17 +369,16 @@ final class ConnectorValidationTest extends TestCase
         $this->assertSame([900201, 900204, 900203, 900202], array_column($orders, 'order_id'));
     }
 
-    public function testSexpUnavailableStillAttemptsStoreErrorUpdate(): void
+    public function testSexpLookupFailureNeverCreatesALegacyShipment(): void
     {
-        // Documents why an unreachable SEXP does not make the real command read-only.
         $oc = Mockery::mock();
         $oc->shouldReceive('searchStatuses')->with('in_dispatchment_order')->once()->andReturn(1);
         $oc->shouldReceive('orders')->with(['filter_status' => 1])->once()->andReturn([['order_id' => 900001, 'order_status_id' => 1, 'shipping' => ['method' => 'Transportadora']]]);
-        $oc->shouldReceive('sendChangeOrdersNotValited')->with(900001, Mockery::type('string'))->once();
+        $oc->shouldNotReceive('sendChangeOrdersNotValited');
         $oc->shouldNotReceive('orderHistory');
         $sexp = Mockery::mock();
         $sexp->shouldReceive('getOrder')->with(900001)->once()->andThrow(new RuntimeException('Synthetic SEXP unavailable'));
-        $sexp->shouldReceive('createOrder')->once()->andThrow(new RuntimeException('Synthetic SEXP unavailable'));
+        $sexp->shouldNotReceive('processInvoicedOrder');
         App\Support\Opencart::swap($oc);
         App\Support\Sexp::swap($sexp);
         $command = new App\Console\Commands\SendOrdersToSexp();

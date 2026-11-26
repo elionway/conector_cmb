@@ -39,13 +39,25 @@ class UpdateOrderInvoice extends Command
         }
         $orders = Opencart::orders(['filter_status' => Opencart::searchStatuses('invoiced_order')]);
 
+        $failed = false;
         foreach ($orders as $order) {
             if ($invoiced = Erp::find($order['order_id'])) {
-                Sexp::processInvoicedOrder($order, $invoiced);
+                try {
+                    Sexp::processInvoicedOrder($order, $invoiced);
+                } catch (\UnexpectedValueException $error) {
+                    $this->warn("Pedido {$order['order_id']}: " . $error->getMessage());
+                    continue;
+                } catch (\Throwable $error) {
+                    \App\Services\ConnectorAlertReporter::reportSafely($error, 'sexp');
+                    $this->error("Pedido {$order['order_id']}: falha na integração com o SEXP.");
+                    $failed = true;
+                    continue;
+                }
 
                 $this->updateOpencartOrderStatus($order['order_id']);
             }
         }
+        return $failed ? self::FAILURE : self::SUCCESS;
     }
 
     private function updateOpencartOrderStatus(int $orderId)

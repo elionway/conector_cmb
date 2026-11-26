@@ -23,7 +23,7 @@ class Sexp {
         $this->address_settings = config('connector.main_address');
     }
 
-    public function createOrder(array $order)
+    private function createOrder(array $order)
     {
 
         $order_prepared = $this->formatOrderDataToSexp($order);
@@ -120,7 +120,7 @@ class Sexp {
         $this->sendInvoicedOrder($order, $this->invoiceData($order, $invoice));
     }
 
-    public function ensureOrderExists(array $order): void
+    private function ensureOrderExists(array $order): void
     {
         $response = $this->getOrder((int)$order['order_id']);
 
@@ -176,34 +176,29 @@ class Sexp {
     {
         $keyField = (string)config('connector.invoice_fields.key', 'CHAVE_NFE');
         $protocolField = (string)config('connector.invoice_fields.protocol', 'PROTOCOLO_NFE');
-        $key = trim((string)$invoice->getAttribute($keyField));
-        $protocol = trim((string)$invoice->getAttribute($protocolField));
-
-        $date = \DateTimeImmutable::createFromFormat('!Ymd', (string)$invoice['EMISSAO']);
-
-        if ($date === false) {
-            throw new \RuntimeException('Data de emissão da NF inválida.');
-        }
-        $data = [];
-
-        if ($key !== '') {
-            $data['chaveNfe'] = $key;
+        $key = trim((string)($invoice->getAttribute($keyField) ?? $invoice->getAttribute('CHAVENFE')));
+        $protocol = trim((string)($invoice->getAttribute($protocolField) ?? $invoice->getAttribute('PROTOCOLO')));
+        $issued = trim((string)$invoice['EMISSAO']);
+        $date = \DateTimeImmutable::createFromFormat('!Ymd', $issued);
+        $number = trim((string)$invoice['NOTA']);
+        $series = trim((string)$invoice['SERIE']);
+        if (!preg_match('/^[0-9]{44}$/D', $key) || !ctype_digit($protocol)
+            || !$date || $date->format('Ymd') !== $issued || !ctype_digit($number)
+            || (int)$number === 0 || !ctype_digit($series) || !is_numeric($order['total'] ?? null)) {
+            throw new \UnexpectedValueException('NF incompleta ou inválida no ERP.');
         }
 
-        $data['data'] = $date->format('Y-m-d\TH:i:s');
-        $data['numero'] = (int)$invoice['NOTA'];
-
-        if ($protocol !== '') {
-            $data['protocoloNfe'] = $protocol;
-        }
-
-        $data['serie'] = (int)trim((string)$invoice['SERIE']);
-        $data['valor'] = (float)$order['total'];
-
-        return $data;
+        return [
+            'chaveNfe' => $key,
+            'data' => $date->format('Y-m-d\TH:i:s'),
+            'numero' => (int)$number,
+            'protocoloNfe' => $protocol,
+            'serie' => (int)$series,
+            'valor' => (float)$order['total'],
+        ];
     }
 
-    private function isMissingOrderResponse(array $response): bool
+    public function isMissingOrderResponse(array $response): bool
     {
         $text = json_encode($response, JSON_UNESCAPED_UNICODE);
 
@@ -224,13 +219,7 @@ class Sexp {
             return $response['soap:Envelope']['soap:Body']['ns2:consultarRemessaResponse']['informacoesRemessa'];
         }
 
-       // return $response['soap:Envelope']['soap:Body']['ns2:consultarRemessaResponse']['informacoesRemessa'];
-
-        if(!empty($response['soap:Envelope']['soap:Fault']['faultstring'])){
-            return ['error' => $response['soap:Envelope']['soap:Body']['ns2:consultarRemessaResponse']['informacoesRemessa']];
-        }
-
-        return ['error'=>$response];
+        return ['error' => $response];
     }
 
     public function addressSettings(): array
@@ -292,7 +281,17 @@ class Sexp {
 
     private function executeTransport(array $params)
     {
-        return XML2Array::createArray($this->sendSoap($params)->body());
+        $response = $this->sendSoap($params);
+        $action = array_key_first($params['soapenv:Envelope']['soapenv:Body']);
+        if ($action !== 'ws:consultarRemessa') {
+            $response->throw();
+            $expected = substr($action, 3) . 'Response';
+            $xml = simplexml_load_string($response->body(), 'SimpleXMLElement', LIBXML_NONET | LIBXML_NOERROR | LIBXML_NOWARNING);
+            if ($xml === false || !$xml->xpath('/*[local-name()="Envelope"]/*[local-name()="Body"]/*[local-name()="' . $expected . '"]')) {
+                throw new \RuntimeException('SEXP não confirmou a operação ' . $action);
+            }
+        }
+        return XML2Array::createArray($response->body());
     }
 
     private function sendSoap(array $params): Response
