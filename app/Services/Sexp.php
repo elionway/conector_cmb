@@ -182,13 +182,42 @@ class Sexp {
         $key = trim((string)($invoice->getAttribute($keyField) ?? $invoice->getAttribute('CHAVENFE')));
         $protocol = trim((string)($invoice->getAttribute($protocolField) ?? $invoice->getAttribute('PROTOCOLO')));
         $issued = trim((string)$invoice['EMISSAO']);
-        $date = \DateTimeImmutable::createFromFormat('!Ymd', $issued);
+        $date = preg_match('/^[0-9]{8}$/D', $issued) ? \DateTimeImmutable::createFromFormat('!Ymd', $issued) : false;
         $number = trim((string)$invoice['NOTA']);
         $series = trim((string)$invoice['SERIE']);
-        if (!preg_match('/^[0-9]{44}$/D', $key) || !ctype_digit($protocol)
-            || !$date || $date->format('Ymd') !== $issued || !ctype_digit($number)
-            || (int)$number === 0 || !ctype_digit($series) || !is_numeric($order['total'] ?? null)) {
-            throw new \UnexpectedValueException('NF incompleta ou inválida no ERP.');
+        $total = $order['total'] ?? null;
+        $problems = [];
+        if (!ctype_digit($number) || (int)$number === 0) {
+            $problems[] = $number === '' ? 'número da NF ausente' : 'número da NF deve ser inteiro positivo';
+        }
+        if (!ctype_digit($series)) {
+            $problems[] = $series === '' ? 'série ausente' : 'série deve conter apenas dígitos';
+        }
+        if (!$date || $date->format('Ymd') !== $issued) {
+            $problems[] = $issued === '' ? 'data de emissão ausente' : 'data de emissão inválida (AAAAMMDD)';
+        }
+        if (!preg_match('/^[0-9]{44}$/D', $key)) {
+            $problems[] = $key === '' ? 'chave da NF-e ausente' : 'chave da NF-e deve ter 44 dígitos';
+        }
+        if (!ctype_digit($protocol)) {
+            $problems[] = $protocol === '' ? 'protocolo ausente' : 'protocolo deve conter apenas dígitos';
+        }
+        if (!is_numeric($total)) {
+            $problems[] = $total === null || $total === '' ? 'total do pedido ausente no OpenCart' : 'total do pedido inválido no OpenCart';
+        }
+        if ($problems) {
+            $label = ctype_digit($number) && (int)$number > 0 ? 'NF ' . $number . ' encontrada' : 'Registro de faturamento encontrado';
+            $lines = [$label . '. Envio ao SEXP pendente: ' . implode('; ', $problems) . '.'];
+            foreach (['Número da NF' => $number, 'Série' => $series, 'Emissão (ERP)' => $issued,
+                'Chave NF-e' => $key, 'Protocolo' => $protocol, 'Total (OpenCart)' => $total] as $field => $value) {
+                if ($value === null || $value === '') {
+                    $display = '(ausente)';
+                } else {
+                    $display = json_encode($value, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_INVALID_UTF8_SUBSTITUTE);
+                }
+                $lines[] = '  ' . $field . ': ' . $display;
+            }
+            throw new \UnexpectedValueException(implode("\n", $lines));
         }
 
         return [
