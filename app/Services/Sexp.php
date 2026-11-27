@@ -266,11 +266,6 @@ class Sexp {
         return $params;
     }
 
-    private function isCreatingOrder(string $xml): bool
-    {
-        return Str::contains($xml, 'incluirRemessa');
-    }
-
     private function execute(array $params, ?callable $capture = null)
     {
         $body = $params['soapenv:Envelope']['soapenv:Body'] ?? [];
@@ -310,34 +305,8 @@ class Sexp {
         ->withBody($params, $contentType)
         ->post($url);
 
-        $this->log($url, $request, $params, $this->isCreatingOrder($params));
-
-
         app(ConnectorAudit::class)->record('sexp.http_received', ['http_status'=>$request->status()]);
         return $request;
-    }
-
-    private function log(string $url, Response $response, ?string $params = '',  bool $isCreatingOrder = false)
-    {
-        $logData = [
-            'url' => $url,
-            'body' => $response->body(),
-            'params' => $params,
-        ];
-
-        $stringfiedData = json_encode($logData);
-
-        $key = Carbon::now()->format('YmdHis') . '-' . md5($stringfiedData . time());
-
-        // $slugedUrl = Str::slug($url);
-
-        // $path = "api-calls/sexp/{$key}.txt";
-
-        // if ($isCreatingOrder) {
-        //     $path = "api-calls/sexp/creating/{$key}.txt";
-        // }
-
-        // Storage::put($path, $stringfiedData);
     }
 
     private function createXmlFromArray(array $params): string
