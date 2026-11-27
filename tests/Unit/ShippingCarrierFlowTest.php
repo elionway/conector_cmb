@@ -143,4 +143,16 @@ final class ShippingCarrierFlowTest extends TestCase
         return [['NOTA', ''], ['NOTA', '0000'], ['SERIE', ''], ['EMISSAO', '20260230'],
             ['CHAVENFE', ''], ['CHAVENFE', '123'], ['PROTOCOLO', '']];
     }
+
+    public function testMessageIdentifiesInvoiceAndEveryBlockingField(): void
+    {
+        $invoice = new Faturado();
+        $invoice->setRawAttributes(['NOTA' => '000088138', 'EMISSAO' => '20261127', 'SERIE' => '4',
+            'CHAVENFE' => '12345', 'PROTOCOLO' => '']);
+        $this->expectException(\UnexpectedValueException::class);
+        $this->expectExceptionMessage("NF 000088138 encontrada. Envio ao SEXP pendente: chave da NF-e deve ter 44 dígitos; protocolo ausente.\n"
+            . "  Número da NF: \"000088138\"\n  Série: \"4\"\n  Emissão (ERP): \"20261127\"\n"
+            . "  Chave NF-e: \"12345\"\n  Protocolo: (ausente)\n  Total (OpenCart): 10");
+        (new Sexp())->processInvoicedOrder(['total' => 10], $invoice);
+    }
 }
