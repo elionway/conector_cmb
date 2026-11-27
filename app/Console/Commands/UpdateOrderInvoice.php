@@ -77,9 +77,11 @@ class UpdateOrderInvoice extends Command
                 }
 
                 $this->updateOpencartOrderStatus($order['order_id']);
-            } elseif ($capture) {
-                $this->warn('ERP ainda sem faturamento para o pedido.');
-                return self::FAILURE;
+            } else {
+                $this->warn("Pedido {$order['order_id']}: aguardando NF. Nenhum registro na tabela de faturamento do ERP.");
+                if ($capture) {
+                    return self::FAILURE;
+                }
             }
         }
         return $failed ? self::FAILURE : self::SUCCESS;
